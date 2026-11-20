@@ -3,10 +3,15 @@ import json
 import os
 import re
 import tempfile
+import threading
 from pathlib import Path
 
 from app.config import Config
 from app.steps import STEPS, now_utc
+
+# One process-wide lock for every read-modify-write of a template's state.json (chosen files in
+# assets.py, step statuses elsewhere). Re-entrant; hold it across the whole read -> change -> write.
+STATE_LOCK = threading.RLock()
 
 _NAME_RE = re.compile(r"[a-z0-9-]{1,40}")
 

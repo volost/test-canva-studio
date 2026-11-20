@@ -7,6 +7,7 @@ import hashlib
 import json
 import shutil
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -20,7 +21,7 @@ from app.genqueue import GenQueue
 from app.imaging.core import aspect_error
 from app.imaging.envelope import check_envelope
 from app.schema import validate_map, validate_style
-from app.store import read_json, write_json_atomic
+from app.store import STATE_LOCK, read_json, write_json_atomic
 
 FIX = Path(__file__).parent / "fixtures"
 MAP = json.loads((FIX / "map_min.json").read_text(encoding="utf-8"))
@@ -226,6 +227,20 @@ class VersionTests(TmpCase):
                 assets.postprocess("hero", self.src("a.png", noisy_photo()), MAP, self.out)
         self.assertEqual((self.out / "hero__v1.jpg").read_bytes(), b"old")
 
+    def test_half_written_composed_version_is_not_listed_or_choosable(self):
+        assets.postprocess("envelope", self.src("t.png", linen()), MAP, self.out)           # complete v1
+        (self.out / "envelope__cover__v2.jpg").write_bytes(b"cover only")                    # v2: cover only
+        (self.out / "envelope__cover__v3.jpg").write_bytes(b"x")
+        (self.out / "envelope__flap__v3.png").write_bytes(b"x")                              # v3: no body
+        self.assertEqual(assets.list_versions(self.out, "envelope"), [(1, "envelope__cover__v1.jpg")])
+        for name in ("envelope__cover__v2.jpg", "envelope__cover__v3.jpg"):
+            with self.assertRaises(assets.AssetError):
+                assets.choose(self.tdir, "envelope", name)
+        self.assertEqual(self.state()["chosen"], {})
+        assets.choose(self.tdir, "envelope", "envelope__cover__v1.jpg")
+        # numbering still goes past the half-written files
+        self.assertEqual(assets.next_version(self.out, "envelope"), 4)
+
     def test_other_assets_do_not_share_numbers(self):
         assets.postprocess("hero", self.src("a.png", noisy_photo()), MAP, self.out)
         p = assets.postprocess("florals", self.src("b.png", on_white()), MAP, self.out)
@@ -240,6 +255,22 @@ class ChooseTests(TmpCase):
         self.assertEqual(st["chosen"], {"hero": "hero__v1.jpg"})
         self.assertEqual(st["steps"], {"images": {"status": "draft", "updated_utc": "x"}})
         self.assertEqual(st["skeleton"], "mini")
+
+    def test_choose_uses_the_public_state_lock(self):
+        p = assets.postprocess("hero", self.src("a.png", noisy_photo()), MAP, self.out)
+        done = threading.Event()
+
+        def work():
+            assets.choose(self.tdir, "hero", p.name)
+            done.set()
+        with STATE_LOCK:                       # another holder of the lock (e.g. a step change)
+            t = threading.Thread(target=work)
+            t.start()
+            self.assertFalse(done.wait(0.3), "choose wrote state.json while the lock was held elsewhere")
+            self.assertEqual(self.state()["chosen"], {})
+        self.assertTrue(done.wait(5))
+        t.join()
+        self.assertEqual(self.state()["chosen"], {"hero": p.name})
 
     def test_choose_refuses_wrong_or_missing_files(self):
         p = assets.postprocess("hero", self.src("a.png", noisy_photo()), MAP, self.out)
@@ -461,6 +492,84 @@ class FlowTests(TmpCase):
         self.assertEqual(res2[0]["files"][0], "envelope__cover__v1.jpg")
         self.assertEqual(self.state()["chosen"]["envelope"], "envelope__cover__v1.jpg")
         self.assertTrue(assets.all_ok(assets.check_all(self.tdir, MAP)))
+
+    def test_generate_all_composes_the_envelope_with_the_seal(self):
+        images = {"hero": noisy_photo(), "florals": on_white(), "seal": seal_source(), "envelope": linen()}
+        q, gen = self.queue(images)
+        tickets = assets.submit_generations(q, self.tdir, MAP, STYLE)            # only=None: every asset
+        order = [t["asset"] for t in tickets]
+        self.assertEqual(order[-1], "envelope")                                  # composed goes last
+        # even if the caller hands the tickets over in map order (envelope before seal), the seal wins
+        tickets = sorted(tickets, key=lambda t: list(MAP["assets"]).index(t["asset"]))
+        self.assertLess([t["asset"] for t in tickets].index("envelope"), [t["asset"] for t in tickets].index("seal"))
+        self.wait(q, 4)
+        pending, results = assets.process_finished(q, self.tdir, MAP, tickets)
+        self.assertEqual(pending, [])
+        self.assertEqual({r["asset"]: r["status"] for r in results}, {a: "done" for a in images})
+        self.assertEqual([r["asset"] for r in results].index("seal") < [r["asset"] for r in results].index("envelope"), True)
+        res = assets.check_all(self.tdir, MAP)
+        self.assertTrue(assets.all_ok(res), res)
+        # the flap layer really carries the seal: stacked layers differ from the cover inside the seal box
+        with Image.open(self.out / "envelope__flap__v1.png") as f, Image.open(self.out / "envelope__body__v1.png") as b, \
+                Image.open(self.out / "envelope__cover__v1.jpg") as c:
+            stacked = np.asarray(Image.alpha_composite(b.convert("RGBA"), f.convert("RGBA")).convert("RGB")).astype(int)
+            diff = np.abs(stacked - np.asarray(c.convert("RGB")).astype(int)).mean(axis=2)
+        cx, cy = (v * 2 for v in MAP["envelope"]["seal_centre"])
+        self.assertGreater(diff[cy - 40:cy + 40, cx - 40:cx + 40].mean(), 5.0)
+
+    def test_composed_ticket_waits_while_its_seal_is_unfinished(self):
+        class FakeQueue:
+            def __init__(self):
+                self.st = {"s": {"id": "s", "state": "running", "saved": [], "error": None},
+                           "e": {"id": "e", "state": "done", "saved": ["e_00001_.png"], "error": None}}
+
+            def status(self):
+                return list(self.st.values())
+        (self.out / "raw").mkdir()
+        linen().save(self.out / "raw" / "e_00001_.png")
+        seal_source().save(self.out / "raw" / "s_00001_.png")
+        tickets = [{"job_id": "e", "asset": "envelope", "seed": 1}, {"job_id": "s", "asset": "seal", "seed": 2}]
+        q = FakeQueue()
+        pending, results = assets.process_finished(q, self.tdir, MAP, tickets)
+        self.assertEqual((pending, results), (tickets, []))                      # nothing yet, no seal-less envelope
+        self.assertEqual(list((self.out).glob("envelope__*")), [])
+        q.st["s"].update(state="done", saved=["s_00001_.png"])
+        pending, results = assets.process_finished(q, self.tdir, MAP, pending)
+        self.assertEqual([r["asset"] for r in results], ["seal", "envelope"])
+        self.assertEqual(pending, [])
+
+    def test_a_failed_seal_does_not_hold_the_envelope(self):
+        class FakeQueue:
+            def status(self):
+                return [{"id": "e2", "state": "done", "saved": ["e2_00001_.png"], "error": None},
+                        {"id": "s2", "state": "failed", "saved": [], "error": "boom"}]
+        (self.out / "raw").mkdir()
+        linen().save(self.out / "raw" / "e2_00001_.png")
+        tickets = [{"job_id": "e2", "asset": "envelope", "seed": 1}, {"job_id": "s2", "asset": "seal", "seed": 2}]
+        pending, results = assets.process_finished(FakeQueue(), self.tdir, MAP, tickets)
+        self.assertEqual(pending, [])
+        self.assertEqual({r["asset"]: r["status"] for r in results}, {"seal": "failed", "envelope": "done"})
+
+    def test_concurrent_process_finished_makes_one_version(self):
+        q, _ = self.queue({"hero": noisy_photo()})
+        t = assets.submit_generations(q, self.tdir, MAP, STYLE, only=["hero"])
+        self.wait(q, 1)
+        barrier, outs, errs = threading.Barrier(4), [], []
+
+        def work():
+            try:
+                barrier.wait()
+                outs.append(assets.process_finished(q, self.tdir, MAP, t))
+            except Exception as e:  # noqa: BLE001
+                errs.append(e)
+        threads = [threading.Thread(target=work) for _ in range(4)]
+        [x.start() for x in threads]
+        [x.join(30) for x in threads]
+        self.assertEqual(errs, [])
+        self.assertEqual(assets.list_versions(self.out, "hero"), [(1, "hero__v1.jpg")])
+        self.assertEqual(sum(len(r) for _, r in outs), 1)                        # reported done exactly once
+        # once finished, the ticket is dropped for everybody
+        self.assertEqual(assets.process_finished(q, self.tdir, MAP, t), ([], []))
 
     def test_second_generation_adds_a_version_and_keeps_the_choice(self):
         q, _ = self.queue({"hero": noisy_photo()})

@@ -4,7 +4,9 @@ Flow: ``submit_generations`` puts one GenQueue job per asset (raw ComfyUI files 
 the caller polls ``process_finished`` (in its own thread, so the queue stays single-worker), which
 runs ``postprocess`` on every finished job and writes a new version ``assets/<asset>__v<n>.<ext>``.
 Versions are never overwritten or deleted. The first version of an asset is chosen automatically,
-later ones only through ``choose``. Messages shown to the user are Ukrainian; every problem string
+later ones only through ``choose``. Every state.json read-modify-write here (choose, auto-choose) holds
+``app.store.STATE_LOCK``; other code that changes state.json (step statuses) must take the same lock.
+Messages shown to the user are Ukrainian; every problem string
 starts with a stable [code].
 """
 import hashlib
@@ -23,7 +25,7 @@ from app.imaging.cutout import solid_cutout, watercolour_to_alpha
 from app.imaging.envelope import check_envelope, compose_envelope
 from app.imaging.sheet import contact_sheet
 from app.steps import now_utc
-from app.store import read_json, write_json_atomic
+from app.store import STATE_LOCK, read_json, write_json_atomic
 
 OPAQUE_KINDS = ("photo", "texture")
 CUTOUT_KINDS = ("watercolour", "solid")
@@ -34,7 +36,8 @@ COVERAGE = (0.005, 0.98)   # sensible alpha coverage of a transparent asset
 WHITE_HINT = ", isolated on a plain pure white background, soft even light, no shadow, no border"
 _NAME = re.compile(r"(?!.*__)[A-Za-z0-9_-]+")
 _AUTO = object()           # "use the chosen seal from state.json"
-_LOCK = threading.RLock()  # version numbers + state.json read-modify-write
+_LOCK = threading.RLock()  # version numbers, ticket claims
+_CLAIMS = {}               # job_id -> "running" | "done": a ticket is postprocessed at most once per process
 
 
 class AssetError(Exception):
@@ -104,8 +107,14 @@ def _scan(out_dir, asset):
 
 
 def list_versions(out_dir, asset):
-    """[(n, file)] sorted by n; for a composed asset the cover files (the other layers share n)."""
-    return [(n, name) for n, name, layer in _scan(out_dir, asset) if layer in (None, "cover")]
+    """[(n, file)] sorted by n; a composed version is listed (as its cover) only when cover, flap and
+    body all exist for that n, so a half-written set can never be chosen."""
+    found = _scan(out_dir, asset)
+    layers = {}
+    for n, _, layer in found:
+        layers.setdefault(n, set()).add(layer)
+    return [(n, name) for n, name, layer in found
+            if layer is None or (layer == "cover" and {"cover", "flap", "body"} <= layers[n])]
 
 
 def next_version(out_dir, asset):
@@ -139,7 +148,7 @@ def choose(template_dir, asset, file):
     tdir = Path(template_dir)
     if file not in {name for _, name in list_versions(tdir / "assets", asset)}:
         raise AssetError(f"{file!r} не є версією ассета {asset!r}")
-    with _LOCK:
+    with STATE_LOCK:
         st = read_json(tdir / "state.json")
         st.setdefault("chosen", {})[asset] = file
         write_json_atomic(tdir / "state.json", st)
@@ -398,6 +407,7 @@ def submit_generations(queue, template_dir, m, style, only=None, prompts=None, s
     for ``process_finished``. Seeds are random unless given; the seed is in the ticket (and GenQueue's log)."""
     by = {p["asset"]: p for p in plan_generations(m, style)}
     names = list(by) if only is None else list(only)
+    names.sort(key=lambda a: by.get(a, {}).get("kind") == "composed")  # composed last: it needs the seal chosen first
     unknown = [a for a in names if a not in by]
     if unknown:
         raise ValueError(f"unknown asset(s): {unknown}")
@@ -430,7 +440,7 @@ def _finish(t, st, tdir, m):
         res["problems"].append(str(e))
         return res
     try:
-        with _LOCK:
+        with STATE_LOCK:
             if not _chosen(tdir).get(t["asset"]):
                 choose(tdir, t["asset"], p.name)
     except Exception as e:
@@ -438,15 +448,44 @@ def _finish(t, st, tdir, m):
     return res
 
 
+def _claim(job_id, state):
+    """Under _LOCK: "claimed" -> this caller may process; otherwise why not."""
+    with _LOCK:
+        if job_id in _CLAIMS:
+            return _CLAIMS[job_id]
+        if state is None or state["state"] not in ("done", "failed"):
+            return "unfinished"
+        _CLAIMS[job_id] = "running"
+        return "claimed"
+
+
 def process_finished(queue, template_dir, m, tickets):
-    """Postprocess every ticket whose job has finished. Returns (still_pending_tickets, results);
-    a result is {asset, job_id, seed, status: done|failed, files, problems}. Never raises for a bad image."""
+    """Postprocess every ticket whose job has finished, each at most once per process. Returns
+    (still_pending_tickets, results); a result is {asset, job_id, seed, status: done|failed, files,
+    problems}. Never raises for a bad image. A ticket another call is processing right now stays pending
+    (it is neither redone nor reported twice); one already processed is dropped. A composed ticket waits
+    while the seal's ticket from the same list is unsettled, so the seal is chosen before it is composed."""
     state = {s["id"]: s for s in queue.status()}
-    pending, results = [], []
-    for t in tickets:
-        st = state.get(t["job_id"])
-        if st is None or st["state"] not in ("done", "failed"):
-            pending.append(t)
-        else:
-            results.append(_finish(t, st, Path(template_dir), m))
-    return pending, results
+    tickets = list(tickets)
+    seal = (m.get("envelope") or {}).get("seal_asset")
+    kinds = {a: (spec or {}).get("kind") for a, spec in (m.get("assets") or {}).items()}
+    comp = lambda t: kinds.get(t["asset"]) == "composed"  # noqa: E731
+    waiting, results = set(), []
+    for t in [t for t in tickets if not comp(t)] + [t for t in tickets if comp(t)]:
+        jid = t["job_id"]
+        if comp(t) and any(o["asset"] == seal and o["job_id"] in waiting for o in tickets):
+            waiting.add(jid)
+            continue
+        why = _claim(jid, state.get(jid))
+        if why in ("unfinished", "running"):
+            waiting.add(jid)
+        elif why == "claimed":
+            try:
+                res = _finish(t, state[jid], Path(template_dir), m)
+            except Exception as e:  # never leave a ticket "running" forever
+                res = {"asset": t["asset"], "job_id": jid, "seed": t.get("seed"), "status": "failed",
+                       "files": [], "problems": [f"{t['asset']}: {type(e).__name__}: {e}"]}
+            with _LOCK:
+                _CLAIMS[jid] = "done"
+            results.append(res)
+    return [t for t in tickets if t["job_id"] in waiting], results
