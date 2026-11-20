@@ -72,23 +72,33 @@ def build_fields(m: dict, texts: dict) -> dict:
             "fields": fields, "do_not_touch": list(m.get("protected") or [])}
 
 
-def page_notes(m: dict, style: dict = None) -> dict:
-    """{page id: checklist text}, each at most NOTES_LIMIT characters."""
+def page_notes(m: dict, style: dict = None, texts: dict = None) -> dict:
+    """{page id: checklist text}, each at most NOTES_LIMIT characters. With `texts` each field line shows the
+    value written into the design (the sample the buyer replaces); without it no value is quoted - a slot's
+    `original` is the skeleton's old wording and must never reach a buyer's note."""
     notes = {}
     for pg in m.get("pages") or []:
         pid = pg["id"]
         mine = [s for s in m.get("slots") or [] if _page(m, s["locator"]) == pid]
-        fields, cells = [], 0
+        fields, cells, per_role = [], 0, {}
         for s in mine:
             if not s.get("personal"):
                 continue
             if s["type"] == "table_cell":
                 cells += 1
                 continue
-            name = _tail(s["locator"]) if "/" in s["locator"] else s.get("role") or s["type"]
-            val = f' "{s["original"].strip()[:40]}"' if s.get("original") else ""
+            if "/" in s["locator"]:
+                name = _tail(s["locator"])
+            else:
+                role = s.get("role") or s["type"]
+                per_role[role] = per_role.get(role, 0) + 1
+                name = f"{role.replace('_', ' ')} #{per_role[role]}"
+            val = ""
+            if texts and texts.get(s["locator"]):
+                one = " / ".join(texts[s["locator"]].split("\n")).strip()
+                val = f' "{one[:40]}{chr(8230) if len(one) > 40 else ""}"'
             cap = f" (max {s['max_len']} characters)" if s.get("max_len") else ""
-            fields.append(f"- {name}:{val}{cap}")
+            fields.append(f"- {name}{(':' + val) if val else ''}{cap}")
         head = [f"EDITING CHECKLIST - {pg.get('title', pid)} (page {pg.get('index')})",
                 "Work on a copy of the design. Change a text by selecting it and typing over it; do not delete a box and add a new one."]
         tail = []
@@ -111,7 +121,7 @@ def page_notes(m: dict, style: dict = None) -> dict:
             tail.append(f"Leave alone: {n_prot} protected element(s) on this page (form, embeds, envelope layers).")
         shown = list(fields)
         while True:
-            body = (["Edit these fields:"] + shown if shown else []) 
+            body = ["Edit these fields:"] + shown if shown else []
             if len(shown) < len(fields):
                 body.append(f"- ... and {len(fields) - len(shown)} more: see fields.json")
             text = "\n".join(head + body + tail)
@@ -142,7 +152,7 @@ def main(argv) -> int:
         style = json.loads(Path(style_path).read_text(encoding="utf-8")) if style_path else None
         out = Path(args[2])
         out.mkdir(parents=True, exist_ok=True)
-        f, n = build_fields(m, texts), page_notes(m, style)
+        f, n = build_fields(m, texts), page_notes(m, style, texts)
         (out / "fields.json").write_text(json.dumps(f, ensure_ascii=False, indent=1), encoding="utf-8")
         (out / "page_notes.json").write_text(json.dumps(n, ensure_ascii=False, indent=1), encoding="utf-8")
     except (OSError, ValueError, KeyError, TypeError) as e:

@@ -11,10 +11,15 @@ Checks (each a {name, passed, detail}); a check that examined nothing fails, bec
   protected   protected_changes() is empty
   structure   no element added or removed; type, page, section, parent and layer order of every record unchanged
   leftovers   no personal slot's original wording (4+ characters) is still anywhere in the design's text
-  images      (with --images) every image slot holds a new picture whose image box is its exact cover box
-  control     the checks run on the untouched original must FAIL; if they do not, none of the above can be trusted
+  images      (with --images) every image slot holds a new picture, its frame (box, rotation, opacity, lock, order)
+              is the original's, and its image box is the exact cover box
+  control     every check must reject a deliberately bad input in the same run: texts on the untouched original,
+              the others on synthetic mutations (a font size, a protected record, a removed record, a wrong colour,
+              a leftover word, an image box with the update_fill bleed or a moved frame), each next to a good input
+              that passes; if any stays green, none of the checks can be trusted
 Exit code 1 when any check fails.
 """
+import copy
 import json
 import sys
 from pathlib import Path
@@ -24,8 +29,8 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 from canva.geometry import cover_box  # noqa: E402
-from canva.ops import colour_state, OpsError, palette_colour  # noqa: E402
-from canva.protected import protected_changes, protected_members  # noqa: E402
+from canva.ops import _frame as frame_of, colour_state, OpsError, palette_colour  # noqa: E402
+from canva.protected import protected_changes, protected_members, run_control  # noqa: E402
 
 FONT_FIELDS = ("fontRef", "fontSize", "weight", "style", "align", "lh", "ls")
 
@@ -143,13 +148,18 @@ def _check_structure(orig, now):
     return _verdict("structure", bad, len(orig), "records")
 
 
-def _check_leftovers(orig, now, m, texts):
-    prot = set(protected_members(orig, m))
+def _leftover_words(m, texts):
     words = []
     for s in _text_slots(m, texts):
         o = (s.get("original") or "").strip().lower()
         if s["type"] == "text" and s.get("personal") and len(o) >= 4 and o not in texts[s["locator"]].lower():
             words.append((o, s["locator"]))
+    return words
+
+
+def _check_leftovers(orig, now, m, texts):
+    prot = set(protected_members(orig, m))
+    words = _leftover_words(m, texts)
     bad = []
     for k, v in now.items():
         if v.get("type") in ("text", "cell") and k not in prot:
@@ -174,6 +184,9 @@ def _check_images(orig, now, m):
                else next((p["fill"] for p in rec.get("paths", []) if p.get("fill") and p["fill"].get("media")), None)) or {}
         omed = (old.get("background") if old["type"] == "section" else old.get("fill") if old["type"] == "rect"
                 else next((p["fill"] for p in old.get("paths", []) if p.get("fill") and p["fill"].get("media")), None)) or {}
+        if frame_of(old) != frame_of(rec):
+            bad.append(f"{loc}: the frame changed (box, rotation, opacity, lock or order)")
+            continue
         if not med.get("media") or med.get("media") == omed.get("media"):
             bad.append(f"{loc}: picture not replaced (media {med.get('media')!r})")
             continue
@@ -187,6 +200,86 @@ def _check_images(orig, now, m):
         if dev > 0.005 * max(fw, fh) + 0.5 or abs(ib[4]) > 0.01:
             bad.append(f"{loc}: image box {ib} is not the cover box {[round(ideal[k], 2) for k in ('top', 'left', 'width', 'height')]} (off by {dev:.1f}px)")
     return _verdict("images", bad, n, "image slots")
+
+
+def _sub(m, slot):
+    return {**m, "slots": [slot], "protected": []}
+
+
+def _probe(name, good, bad):
+    """(ok, detail): `good` ({passed}) must pass and `bad` must fail - a check shown to tell them apart."""
+    ok = good["passed"] and not bad["passed"]
+    return name, ok, (f"{name}: good input {'passes' if good['passed'] else 'FAILS'}, bad input "
+                      f"{'rejected' if not bad['passed'] else 'ACCEPTED'}")
+
+
+def _controls(orig, m, texts, style, images):
+    """Probes of every check but `texts` on synthetic inputs built from the original. None of them depends on
+    the design under test, so a green result there is a green result of the checker itself."""
+    out = []
+    cp = copy.deepcopy
+    ts = [s for s in _text_slots(m, texts) if _font_ref(orig, s["locator"]) and orig[s["locator"]].get("regions")
+          and orig[s["locator"]].get("text")]
+    if ts:
+        loc = ts[0]["locator"]
+        bad = cp(orig)
+        bad[loc]["regions"][0]["fontSize"] += 1.0
+        out.append(_probe("formatting", _check_formatting(orig, cp(orig), _sub(m, ts[0]), {loc: orig[loc]["text"]}),
+                          _check_formatting(orig, bad, _sub(m, ts[0]), {loc: orig[loc]["text"]})))
+    ok, detail = run_control(orig, m)
+    out.append(("protected", ok, "protected: " + detail))
+    if orig:
+        gone, added = cp(orig), cp(orig)
+        k0 = sorted(orig)[0]
+        del gone[k0]
+        added["NEW-PROBE"] = cp(orig[k0])
+        out.append(_probe("structure", _check_structure(orig, cp(orig)), _check_structure(orig, gone)))
+        out.append(_probe("structure+", _check_structure(orig, cp(orig)), _check_structure(orig, added)))
+    if style is not None:
+        cs = [s for s in ts if palette_colour(style, s.get("role"))]
+        if cs:
+            loc, want = cs[0]["locator"], palette_colour(style, cs[0].get("role"))
+            good, bad = cp(orig), cp(orig)
+            for r in good[loc]["regions"]:
+                r["color"] = want
+            for r in bad[loc]["regions"]:
+                r["color"] = "#010203" if want != "#010203" else "#020304"
+            out.append(_probe("colours", _check_colours(orig, good, _sub(m, cs[0]), {loc: good[loc]["text"]}, style),
+                              _check_colours(orig, bad, _sub(m, cs[0]), {loc: bad[loc]["text"]}, style)))
+    ws = _leftover_words(m, texts)
+    if ws:
+        word, loc = ws[0]
+        slot = next(s for s in m["slots"] if s["locator"] == loc)
+        tx = {loc: "something else entirely"}
+        o1 = {loc: cp(orig[loc])}                  # one record: other texts of the design may legitimately hold the word
+        good, bad = cp(o1), cp(o1)
+        good[loc]["text"] = "something else entirely"
+        bad[loc]["text"] = "prefix " + word
+        out.append(_probe("leftovers", _check_leftovers(o1, good, _sub(m, slot), tx),
+                          _check_leftovers(o1, bad, _sub(m, slot), tx)))
+    if images:
+        im = next((s for s in m.get("slots") or [] if s["type"] == "image" and s["locator"] in orig
+                   and s["locator"] not in (m.get("protected") or []) and orig[s["locator"]]["type"] != "section"), None)
+        if im is not None:
+            loc = im["locator"]
+            rec = orig[loc]
+            fw, fh = rec["box"][2:4]
+            ideal = cover_box(fw, fh, *m["assets"][im["asset"]]["frame"])
+
+            def placed(box=None, move=False):
+                n = cp(orig)
+                tgt = n[loc]["fill"] if rec["type"] == "rect" else next(p["fill"] for p in n[loc]["paths"] if p["fill"].get("media"))
+                tgt["media"] = "MAPROBE0001"
+                tgt["imageBox"] = box or [ideal["top"], ideal["left"], ideal["width"], ideal["height"], 0.0]
+                if move:
+                    n[loc]["box"][0] += 5.0
+                return n
+            sm = _sub(m, im)
+            good = _check_images(orig, placed(), sm)
+            bleed = [ideal["top"] - 11.34, ideal["left"] - 11.34, ideal["width"] + 22.68, ideal["height"] + 22.68, 0.0]
+            out.append(_probe("images (bleed)", good, _check_images(orig, placed(box=bleed), sm)))
+            out.append(_probe("images (frame)", good, _check_images(orig, placed(move=True), sm)))
+    return out
 
 
 def final_check(orig: dict, now: dict, m: dict, texts: dict, style: dict = None, images: bool = False,
@@ -208,11 +301,14 @@ def final_check(orig: dict, now: dict, m: dict, texts: dict, style: dict = None,
         failed = [r["name"] for r in on_orig if not r["passed"]]
         want_fail = any(s["locator"] in orig and orig[s["locator"]].get("text") != texts[s["locator"]]
                         for s in _text_slots(m, texts))
-        ok = want_fail and "texts" in failed
-        res.append({"name": "control", "passed": ok,
-                    "detail": f"the untouched original fails {len(failed)} check(s): {failed}" if ok else
-                    "the texts check does not fail on the untouched original as it must (no text differs from the original, or the check is broken): "
-                    f"failed={failed}"})
+        probes = _controls(orig, m, texts, style, images)
+        slack = [d for _, ok, d in probes if not ok]
+        ok = want_fail and "texts" in failed and not slack
+        res.append({"name": "control", "passed": ok, "detail":
+                    f"texts fails on the untouched original ({'yes' if 'texts' in failed else 'NO'}; it fails {len(failed)} "
+                    f"check(s): {failed}); {len(probes) - len(slack)}/{len(probes)} synthetic probes behave"
+                    + ("" if not slack else ": " + "; ".join(slack))
+                    + ("" if want_fail else "; no text differs from the original, so texts cannot be shown to fail")})
     return res
 
 

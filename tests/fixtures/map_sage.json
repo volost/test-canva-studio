@@ -254,7 +254,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LB8pDRc6W62dpK1x",
    "type": "text",
-   "role": "heading_light",
+   "role": "heading_on_photo",
    "asset": null,
    "personal": true,
    "column_px": 433,
@@ -264,7 +264,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBp8TByGcwHlSLvb",
    "type": "text",
-   "role": "heading_light",
+   "role": "heading_on_photo",
    "asset": null,
    "personal": false,
    "column_px": 433,
@@ -274,7 +274,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBBR8XdHjNC5rZYy",
    "type": "text",
-   "role": "heading_light",
+   "role": "heading_on_photo",
    "asset": null,
    "personal": true,
    "column_px": 433,
@@ -284,7 +284,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LB4vtVTY726M0RFb",
    "type": "text",
-   "role": "script_light",
+   "role": "script_on_photo",
    "asset": null,
    "personal": false,
    "column_px": 433,
@@ -294,7 +294,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBrvyMZbNKfnX56T",
    "type": "text",
-   "role": "body_light",
+   "role": "body_on_photo",
    "asset": null,
    "personal": false,
    "column_px": 433,
@@ -304,7 +304,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBr2rdMk4cRqs9N5",
    "type": "text",
-   "role": "body_light",
+   "role": "body_on_photo",
    "asset": null,
    "personal": false,
    "column_px": 433,
@@ -314,7 +314,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LB3jYgPSwwDfJVMH",
    "type": "text",
-   "role": "monogram_light",
+   "role": "monogram_on_photo",
    "asset": null,
    "personal": true,
    "column_px": 433,
@@ -324,7 +324,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBmsT4bxhdp3CN9z",
    "type": "text",
-   "role": "heading_light",
+   "role": "heading_on_photo",
    "asset": null,
    "personal": true,
    "column_px": 433,
@@ -334,7 +334,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBC2DSNHJZPmHNBD",
    "type": "text",
-   "role": "date_light",
+   "role": "date_on_photo",
    "asset": null,
    "personal": true,
    "column_px": 433,
@@ -384,7 +384,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBHdqXf19yPGTShP-LBQnFM0X5DyDLZpn",
    "type": "text",
-   "role": "script_light",
+   "role": "script_on_photo",
    "asset": null,
    "personal": false,
    "column_px": 571,
@@ -394,7 +394,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBHdqXf19yPGTShP-LBxKXGczPTnhY5kQ",
    "type": "text",
-   "role": "body_light",
+   "role": "body_on_photo",
    "asset": null,
    "personal": false,
    "column_px": 571,
@@ -854,7 +854,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PB8rV2yHB467ffCP-LBmSj3C9V8LkCKgq",
    "type": "text",
-   "role": "heading_light",
+   "role": "heading_on_photo",
    "asset": null,
    "personal": false,
    "column_px": 634,
@@ -864,7 +864,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PB8rV2yHB467ffCP-LBfmYgR80PZgBhjs",
    "type": "text",
-   "role": "body_light",
+   "role": "body_on_photo",
    "asset": null,
    "personal": false,
    "column_px": 634,
@@ -874,7 +874,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PB8rV2yHB467ffCP-LBxsjGtbhwP7C1dG",
    "type": "text",
-   "role": "body_light",
+   "role": "body_on_photo",
    "asset": null,
    "personal": false,
    "column_px": 634,
@@ -884,7 +884,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBZRYcwtckqDgbPS",
    "type": "text",
-   "role": "monogram_light",
+   "role": "monogram_on_photo",
    "asset": null,
    "personal": true,
    "column_px": 576,
@@ -894,7 +894,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBb0KVGWTRzhmr0G",
    "type": "text",
-   "role": "script_light",
+   "role": "script_on_photo",
    "asset": null,
    "personal": true,
    "column_px": 576,
@@ -904,7 +904,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBhKmd2QQFNRZQtk",
    "type": "text",
-   "role": "heading_light",
+   "role": "heading_on_photo",
    "asset": null,
    "personal": true,
    "column_px": 576,
@@ -914,7 +914,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBh6SKFMMS9BMWBG",
    "type": "text",
-   "role": "heading_light",
+   "role": "heading_on_photo",
    "asset": null,
    "personal": false,
    "column_px": 576,
@@ -924,7 +924,7 @@
   {
    "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBp4bPRcxF0Wvx2f",
    "type": "text",
-   "role": "heading_light",
+   "role": "heading_on_photo",
    "asset": null,
    "personal": true,
    "column_px": 576,

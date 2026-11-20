@@ -9,7 +9,7 @@ from app.schema import validate_map, validate_style
 from canva import facts as F
 from canva import layout, outline, probe_diff
 from canva.geometry import cover_box
-from canva.ops import OpsError, build_image_ops, build_ops, to_calls, verify_batch
+from canva.ops import OpsError, build_image_ops, build_ops, to_calls, verify_batch, verify_control
 from tests import canva_helpers as H
 
 
@@ -187,6 +187,18 @@ class BuildOpsMiniTests(unittest.TestCase):
         calls = to_calls(self.m, build_ops(self.m, self.st, self.tx, self.facts))
         self.assertEqual(calls["PGmini01"]["page_index"], 1)
         self.assertTrue(calls["PGmini01"]["operations"])
+
+    def test_slots_under_a_protected_locator_are_still_written(self):
+        # a protected locator covers itself; descendants the map lists as slots were listed on purpose (the envelope
+        # layers inside a protected group, calendar cells of a protected table): they get their writes
+        m = copy.deepcopy(self.m)
+        m["protected"] = ["p1/cell"]
+        facts = copy.deepcopy(self.facts)
+        facts["p1/cell"] = {"type": "table", "page": "PGmini01", "section": "SEC1", "parent": None, "order": 5,
+                            "box": [0, 0, 1, 1], "rotation": 0.0, "opacity": 1, "locked": False, "cells": 1}
+        facts["p1/cell/day"]["parent"] = "p1/cell"
+        b = build_ops(m, self.st, self.tx, facts)
+        self.assertIn("p1/cell/day", {o["locator_id"] for o in ops_of(b)})
 
     def test_inputs_not_mutated(self):
         before = copy.deepcopy((self.m, self.st, self.tx, self.facts))
@@ -401,6 +413,33 @@ class VerifyBatchTests(unittest.TestCase):
         self.assertTrue(any("p1/image/hero" in f for f in verify_batch(facts, after, ops)))
 
 
+class VerifyControlTests(VerifyBatchTests):
+    """Runs on the same real data as VerifyBatchTests (its tests re-run here harmlessly)."""
+
+    def test_control_ok_on_a_clean_batch_and_on_an_unapplied_one(self):
+        for n in (1, 6):
+            ops = self.subset(n)
+            ok, detail = verify_control(self.orig, self.after_for(ops), ops)
+            self.assertTrue(ok, detail)
+            self.assertIn("rejected", detail)
+        ok, detail = verify_control(self.orig, copy.deepcopy(self.orig), self.subset(3))   # batch not applied
+        self.assertTrue(ok, detail)
+
+    def test_control_fails_when_no_record_can_be_perturbed(self):
+        ops = self.subset(2)
+        only_targets = {o["locator_id"]: copy.deepcopy(self.sage[o["locator_id"]]) for o in ops}
+        ok, detail = verify_control({k: v for k, v in self.orig.items() if k in only_targets}, only_targets, ops)
+        self.assertFalse(ok)
+
+    def test_control_fails_when_the_verifier_is_blind(self):
+        from unittest import mock
+        import canva.ops as ops_mod
+        ops = self.subset(2)
+        with mock.patch.object(ops_mod, "verify_batch", return_value=[]):
+            ok, detail = verify_control(self.orig, self.after_for(ops), ops)
+        self.assertFalse(ok, detail)
+
+
 class PortedToolsTests(unittest.TestCase):
     def raw(self):
         return {"design_content": {"pages": [{
@@ -499,6 +538,7 @@ class CliTests(unittest.TestCase):
             rep = d / "verify.txt"
             r = H.run_cli("ops.py", "verify", H.FX / "facts_orig.json", H.FX / "facts_orig.json", files[0], rep)
             self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+            self.assertIn("control ok", r.stdout)
             self.assertTrue(rep.exists())
             self.assertIn(str(rep), r.stdout)
 

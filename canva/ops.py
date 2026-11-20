@@ -10,8 +10,9 @@ Usage (python -I canva/ops.py ...):
       update_fill + exact-cover crop_media for every image slot with an upload -> out_dir/images_<page id>.json
       uploads.json = {asset or "asset:layer": {"media_id", "pixel_size": [w, h], "alt_text"}}.
   verify <facts_before.json> <facts_after.json> <batch.json> <report.txt>
-      checks each operation against the facts after the edit and lists every change nothing asked for
-      (exit 1 when there is a finding).
+      first runs its own control (an untargeted change and a wrong expected value must be caught on this very
+      data), then checks each operation against the facts after the edit and lists every change nothing asked
+      for (exit 1 when there is a finding or the control fails).
 
 Rules the builders keep (DESIGN 3 and 5.2, PLAYBOOK 4-6): a locator in map["protected"] never gets an operation;
 replace_text keeps the font (colour is a separate format_text); after update_fill comes crop_media to the exact
@@ -379,6 +380,42 @@ def verify_batch(before: dict, after: dict, ops: list) -> list:
     return found
 
 
+def verify_control(before: dict, after: dict, ops: list):
+    """(ok, detail): verify_batch must catch what it is built to catch, on this very data. (a) an untargeted record
+    perturbed by 7 px adds exactly one finding about it; (b) the first operation told to expect a wrong value adds
+    findings (skipped when that operation already fails, as then the wrong value cannot be told apart)."""
+    base = verify_batch(before, after, ops)
+    targets = {o.get("locator_id") for o in ops}
+    victim = next((k for k in sorted(after) if k not in targets and before.get(k) == after[k] and after[k].get("box")), None)
+    if victim is None:
+        return False, "no untouched record with a box to perturb: the untargeted-change detector cannot be shown to work"
+    bad = copy.deepcopy(after)
+    bad[victim]["box"][0] += 7.0
+    hit = verify_batch(before, bad, ops)
+    if not (len(hit) == len(base) + 1 and any(victim in f for f in hit)):
+        return False, f"an untargeted 7 px move of {victim} was not reported ({len(hit) - len(base)} new findings)"
+    detail = f"untargeted 7 px move of {victim} reported"
+    for i, op in enumerate(ops):
+        wrong = None
+        if op["type"] == "replace_text":
+            wrong = {**op, "text": op["text"] + "!"}
+        elif op["type"] in ("recolor_element", "update_stroke_properties"):
+            wrong = {**op, "color": "#010203"}
+        elif op["type"] == "format_text" and "color" in op["formatting"]:
+            wrong = {**op, "formatting": {**op["formatting"], "color": "#010203"}}
+        if wrong is None:
+            continue
+        if any(op["locator_id"] in f and op["type"] in f for f in base):
+            detail += "; wrong-value probe skipped (that operation already fails)"
+            break
+        hit = verify_batch(before, after, ops[:i] + [wrong] + ops[i + 1:])
+        if len(hit) <= len(base):
+            return False, f"{detail}; but a wrong expected value for {op['type']} {op['locator_id']} was accepted"
+        detail += f"; wrong expected value for {op['type']} on one element rejected"
+        break
+    return True, detail
+
+
 # ---------------------------------------------------------------- CLI
 
 def _load(path):
@@ -421,9 +458,14 @@ def main(argv) -> int:
             print(f"{len(notes)} notes\n  notes: {nf}")
         elif cmd == "verify" and len(a) == 4:
             batch = _load(a[2])
-            found = verify_batch(_load(a[0]), _load(a[1]), batch["operations"])
+            before, after = _load(a[0]), _load(a[1])
+            ok, cdetail = verify_control(before, after, batch["operations"])
+            if not ok:
+                print(f"CONTROL FAILED - the verification cannot be trusted: {cdetail}")
+                return 1
+            found = verify_batch(before, after, batch["operations"])
             Path(a[3]).write_text("\n".join(found + [f"verify: {len(batch['operations'])} operations, findings = {len(found)}"]) + "\n", encoding="utf-8")
-            print(f"verify: {len(batch['operations'])} operations, findings = {len(found)}\n  report: {a[3]}")
+            print(f"control ok: {cdetail}\nverify: {len(batch['operations'])} operations, findings = {len(found)}\n  report: {a[3]}")
             return 1 if found else 0
         else:
             print(__doc__)

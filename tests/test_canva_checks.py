@@ -40,6 +40,39 @@ class ProtectedTests(unittest.TestCase):
         self.assertIn(child, found[0])
         self.assertIn("MAXXXXXXXXX", found[0])
 
+    def test_envelope_layer_inside_protected_group_keeps_its_frame(self):
+        # the overlay children are image slots: their picture may change, their frame may not
+        group = self.m["protected"][3]
+        child = next(k for k, v in self.orig.items() if k.startswith(group + "-") and v["type"] == "rect")
+        self.assertIn(child, {s["locator"] for s in self.m["slots"]})
+        media_only = copy.deepcopy(self.orig)
+        media_only[child]["fill"]["media"] = "MANEW"
+        media_only[child]["fill"]["imageBox"] = [1.0, 2.0, 3.0, 4.0, 0.0]
+        self.assertEqual(protected_changes(self.orig, media_only, self.m), [])
+        for name, mutate in {
+            "moved": lambda n: n[child]["box"].__setitem__(0, n[child]["box"][0] + 5.0),
+            "resized": lambda n: n[child]["box"].__setitem__(2, n[child]["box"][2] - 5.0),
+            "rotated": lambda n: n[child].__setitem__("rotation", 2.0),
+            "faded": lambda n: n[child].__setitem__("opacity", 0.5),
+            "unlocked": lambda n: n[child].__setitem__("locked", not n[child]["locked"]),
+            "reordered": lambda n: n[child].__setitem__("order", 9),
+        }.items():
+            now = copy.deepcopy(self.orig)
+            mutate(now)
+            found = protected_changes(self.orig, now, self.m)
+            self.assertEqual(len(found), 1, (name, found))
+            self.assertIn(child, found[0])
+            self.assertIn("frame only", found[0])
+
+    def test_calendar_cells_of_a_protected_table_may_be_written_but_the_table_may_not_move(self):
+        table = next(k for k, v in self.orig.items() if v["type"] == "table")
+        m = copy.deepcopy(self.m)
+        m["protected"].append(table)
+        self.assertEqual(protected_changes(self.orig, self.sage, m), [])        # cell texts changed: allowed
+        moved = copy.deepcopy(self.sage)
+        moved[table]["box"][1] += 4.0
+        self.assertEqual(len(protected_changes(self.orig, moved, m)), 1)
+
     def test_each_kind_of_change_is_found(self):
         mm = H.mini_map()
         mm["protected"] = ["p1/text/footer", "p1/image/hero"]
@@ -179,6 +212,36 @@ class FinalCheckTests(unittest.TestCase):
         self.assertFalse(res["images"]["passed"])
         self.assertIn("p1/image/hero", res["images"]["detail"])
 
+    def test_images_frame_must_equal_the_original(self):
+        m, facts = H.mini_map(), H.mini_facts()
+        for a in ("hero", "envelope", "florals"):
+            m["assets"][a]["frame"] = [300, 200]
+        m["assets"]["seal"]["frame"] = [200, 200]
+        now = copy.deepcopy(facts)
+        for loc, rec in now.items():
+            if "/image/" in loc:
+                rec["fill"]["media"] = "MANEW_" + loc[-4:]
+        now["p1/image/hero"]["box"][0] += 5.0
+        res = by_name(final_check(facts, now, m, H.mini_texts(), images=True, control=False))
+        self.assertFalse(res["images"]["passed"])
+        self.assertIn("frame changed", res["images"]["detail"])
+
+    def test_control_runs_a_probe_per_check_and_fails_if_a_check_goes_blind(self):
+        from unittest import mock
+        import canva.final_check as fc
+        res = by_name(final_check(self.orig, self.sage, self.m, self.tx, style=self.st, images=True))
+        self.assertIn("8/8 synthetic probes behave", res["control"]["detail"])
+        self.assertTrue(res["control"]["passed"])
+        blind = {"name": "x", "passed": True, "detail": ""}
+        for fn in ("_check_formatting", "_check_structure", "_check_colours", "_check_leftovers", "_check_images"):
+            with mock.patch.object(fc, fn, return_value=blind):
+                res = by_name(final_check(self.orig, self.sage, self.m, self.tx, style=self.st, images=True))
+            self.assertFalse(res["control"]["passed"], fn)
+        with mock.patch.object(fc, "protected_changes", return_value=[]), \
+                mock.patch.object(fc, "run_control", return_value=(False, "blind")):
+            res = by_name(final_check(self.orig, self.sage, self.m, self.tx, style=self.st))
+        self.assertFalse(res["control"]["passed"])
+
     def test_inputs_not_mutated(self):
         o, n = copy.deepcopy(self.orig), copy.deepcopy(self.sage)
         final_check(o, n, self.m, self.tx, style=self.st)
@@ -230,6 +293,22 @@ class FieldsTests(unittest.TestCase):
         n_personal = sum(1 for s in m["slots"] if s["personal"] and "PBw4SHZw3cbPHqdd" in s["locator"])
         self.assertGreater(n_personal, 10)
         self.assertIn("calendar", main.lower())
+
+    def test_page_notes_never_quote_the_skeletons_old_wording(self):
+        m, st, tx = H.load("map_sage.json"), H.load("style_sage.json"), H.load("texts_sage.json")
+        orig_words = {s["original"].strip() for s in m["slots"] if s["personal"] and s["original"]}
+        self.assertIn("DAVID", orig_words)
+        without = page_notes(m, style=st)["PBw4SHZw3cbPHqdd"]
+        for w in orig_words:
+            self.assertNotIn(f'"{w}"', without)
+        self.assertIn("- heading on photo #1 (max 13 characters)", without)
+        self.assertIn("- heading on photo #2 (max 13 characters)", without)              # lines of one role are told apart
+        withv = page_notes(m, style=st, texts=tx)["PBw4SHZw3cbPHqdd"]
+        self.assertIn('"THEO"', withv)
+        self.assertNotIn("DAVID", withv)
+        lines = withv.split("\n")
+        i = lines.index("Edit these fields:")
+        self.assertTrue(all(l.startswith("- ") for l in lines[i + 1:i + 20]), lines[i:i + 20])   # no value splits a line
 
     def test_page_notes_without_style_and_symbolic_locators(self):
         notes = page_notes(H.mini_map())

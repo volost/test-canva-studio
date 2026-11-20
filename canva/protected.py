@@ -6,8 +6,10 @@ Protected = every locator in map["protected"] (the form, embeds, envelope overla
 below it (a group's children, a table's cells) EXCEPT descendants that the map lists as slots of their own (the
 two envelope layers inside a protected overlay group are image slots: the images are replaced, the group stays).
 For each protected record the whole record must be identical: media id, image box, position, size, rotation,
-opacity, lock, layer order, text, children list, url. For every section that holds a protected record the order
-of its elements must be identical too. A protected locator that is not in the original facts is reported.
+opacity, lock, layer order, text, children list, url. A slot below a protected locator may get its content written
+(picture, text, colour) but its frame must stay: position, size, rotation, opacity, lock, layer order, parent are
+compared, the content fields are not. For every section that holds a protected record the order of its elements
+must be identical too. A protected locator that is not in the original facts is reported.
 Control (run by the CLI): a synthetic change to one protected record must be reported, an identical copy must be clean.
 Exit code 1 on any violation or a failed control.
 """
@@ -23,8 +25,9 @@ if _ROOT not in sys.path:
 from canva.facts import flat  # noqa: E402
 
 
-def protected_members(orig: dict, m: dict) -> list:
-    """Locators in `orig` that the protection covers (sorted)."""
+def protected_members(orig: dict, m: dict, with_slots: bool = False) -> list:
+    """Locators in `orig` that the protection covers, sorted: the protected locators and everything below them.
+    Descendants the map lists as slots of their own are left out unless with_slots (see protected_changes)."""
     prot = set(m.get("protected") or [])
     own_slots = {s["locator"] for s in m.get("slots") or []} - prot
     members = set()
@@ -32,9 +35,24 @@ def protected_members(orig: dict, m: dict) -> list:
         if p in orig:
             members.add(p)
         for k in orig:
-            if k.startswith(p + "-") and k not in own_slots:
+            if k.startswith(p + "-") and (with_slots or k not in own_slots):
                 members.add(k)
     return sorted(members)
+
+
+def _frame_only(v: dict) -> dict:
+    """The record without the fields a slot's content write may change (picture, text, colours)."""
+    v = copy.deepcopy(v)
+    for k in ("text", "regions", "innerText", "fill", "background"):
+        if k in v:
+            v[k] = None
+    for p in v.get("paths", []):
+        p["fill"] = None
+        if p.get("stroke"):
+            p["stroke"]["color"] = None
+    if isinstance(v.get("stroke"), dict):
+        v["stroke"]["color"] = None
+    return v
 
 
 def _short(v):
@@ -48,15 +66,17 @@ def protected_changes(orig: dict, now: dict, m: dict) -> list:
         if p not in orig:
             found.append(f"UNKNOWN protected locator {p}: not in the original facts (stale map?)")
     sections = set()
-    for k in protected_members(orig, m):
+    strict = set(protected_members(orig, m))
+    for k in protected_members(orig, m, with_slots=True):
         v = orig[k]
         if k not in now:
             found.append(f"MISSING protected {k}")
             continue
-        if v != now[k]:
-            fa, fb = flat(v), flat(now[k])
+        a, b = (v, now[k]) if k in strict else (_frame_only(v), _frame_only(now[k]))
+        if a != b:
+            fa, fb = flat(a), flat(b)
             d = [f"{p}: {_short(fa.get(p))} -> {_short(fb.get(p))}" for p in sorted(set(fa) | set(fb)) if fa.get(p) != fb.get(p)]
-            found.append(f"CHANGED protected {k}: " + "; ".join(d[:4]) + (f" (+{len(d) - 4} more)" if len(d) > 4 else ""))
+            found.append(f"CHANGED protected {k}{'' if k in strict else ' (slot below a protected locator: frame only)'}: " + "; ".join(d[:4]) + (f" (+{len(d) - 4} more)" if len(d) > 4 else ""))
         if v.get("page") is not None and v.get("section") is not None:
             sections.add(f"{v['page']}-{v['section']}")
     for sk in sorted(sections):
