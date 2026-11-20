@@ -38,8 +38,9 @@
 - Тести з сервером відкривають порт: у пісочниці Claude Code це EPERM. Повний набір — поза пісочницею, або
   власник вмикає `sandbox.network.allowLocalBinding: true`.
 - Демо для перевірки інтерфейсу: `python -I tools/demo_root.py <порожня папка> --port 8765`; конфіг вбудованого
-  браузера `studio-demo` — у `/Users/volost/GitRepos/canva/.claude/launch.json` (тека демо — у scratchpad сесії,
-  після перезавантаження потрібна нова порожня тека).
+  браузера `studio-demo` — у `/Users/volost/GitRepos/canva/.claude/launch.json`. Скрипт щоразу засіває теку
+  наново й відмовляється від непорожньої, тож **перед кожним запуском** у `launch.json` треба вказати нову
+  порожню теку (стара `scratchpad/demo1` уже засіяна).
 
 ## Перед стартом нової сесії
 
