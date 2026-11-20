@@ -1,0 +1,1995 @@
+{
+ "skeleton": "sage-linen",
+ "design_id": "DAHatAFDQz4",
+ "pages": [
+  {
+   "index": 1,
+   "id": "PBXlqtRQwJ1yRgrZ",
+   "title": "ENVELOPE"
+  },
+  {
+   "index": 2,
+   "id": "PBw4SHZw3cbPHqdd",
+   "title": "MAIN PAGE"
+  },
+  {
+   "index": 3,
+   "id": "PBk5WNyktq95LJP9",
+   "title": "REVEAL ENVELOPE"
+  }
+ ],
+ "assets": {
+  "paper_tall": {
+   "kind": "texture",
+   "frame": [
+    1366,
+    4201
+   ],
+   "role": "paper",
+   "transparent": false
+  },
+  "envelope_cover": {
+   "kind": "composed",
+   "frame": [
+    1366,
+    964
+   ],
+   "role": "envelope",
+   "transparent": false
+  },
+  "overlay_flap": {
+   "kind": "composed",
+   "frame": [
+    1366,
+    964
+   ],
+   "role": "envelope",
+   "transparent": true
+  },
+  "overlay_body": {
+   "kind": "composed",
+   "frame": [
+    1366,
+    964
+   ],
+   "role": "envelope",
+   "transparent": true
+  },
+  "seal": {
+   "kind": "watercolour",
+   "frame": [
+    160,
+    198
+   ],
+   "role": "seal",
+   "transparent": true
+  },
+  "letter_card": {
+   "kind": "composed",
+   "frame": [
+    483,
+    800
+   ],
+   "role": "card",
+   "transparent": true
+  },
+  "sprig_tall": {
+   "kind": "watercolour",
+   "frame": [
+    137,
+    214
+   ],
+   "role": "decor",
+   "transparent": true
+  },
+  "wreath_sage": {
+   "kind": "watercolour",
+   "frame": [
+    332,
+    326
+   ],
+   "role": "decor",
+   "transparent": true
+  },
+  "wreath_light": {
+   "kind": "watercolour",
+   "frame": [
+    237,
+    232
+   ],
+   "role": "decor",
+   "transparent": true
+  },
+  "divider_leaf": {
+   "kind": "watercolour",
+   "frame": [
+    398,
+    37
+   ],
+   "role": "divider",
+   "transparent": true
+  },
+  "bullet": {
+   "kind": "watercolour",
+   "frame": [
+    82,
+    74
+   ],
+   "role": "bullet",
+   "transparent": true
+  },
+  "vinyl": {
+   "kind": "solid",
+   "frame": [
+    153,
+    154
+   ],
+   "role": "decor",
+   "transparent": true
+  },
+  "rings": {
+   "kind": "solid",
+   "frame": [
+    356,
+    158
+   ],
+   "role": "decor",
+   "transparent": true
+  },
+  "pin": {
+   "kind": "solid",
+   "frame": [
+    145,
+    254
+   ],
+   "role": "icon",
+   "transparent": true
+  },
+  "photo_hero": {
+   "kind": "photo",
+   "frame": [
+    1366,
+    964
+   ],
+   "role": "hero",
+   "transparent": false
+  },
+  "photo_story": {
+   "kind": "photo",
+   "frame": [
+    1366,
+    1116
+   ],
+   "role": "story",
+   "transparent": false
+  },
+  "photo_venue": {
+   "kind": "photo",
+   "frame": [
+    1366,
+    725
+   ],
+   "role": "venue",
+   "transparent": false
+  },
+  "photo_hotel": {
+   "kind": "photo",
+   "frame": [
+    1366,
+    725
+   ],
+   "role": "hotel",
+   "transparent": false
+  },
+  "photo_registry": {
+   "kind": "photo",
+   "frame": [
+    1366,
+    589
+   ],
+   "role": "registry",
+   "transparent": false
+  },
+  "photo_couple": {
+   "kind": "photo",
+   "frame": [
+    1366,
+    725
+   ],
+   "role": "couple",
+   "transparent": false
+  }
+ },
+ "slots": [
+  {
+   "locator": "PBXlqtRQwJ1yRgrZ-PBGsmwgM1JByC70M-LBwj9Fd0qsNW4Ss9",
+   "type": "text",
+   "role": "script",
+   "asset": null,
+   "personal": false,
+   "column_px": 433,
+   "max_len": null,
+   "original": "A Letter From Our Hearts"
+  },
+  {
+   "locator": "PBXlqtRQwJ1yRgrZ-PBGsmwgM1JByC70M-LBXdky3Z1WFHhLnT",
+   "type": "text",
+   "role": "heading",
+   "asset": null,
+   "personal": true,
+   "column_px": 433,
+   "max_len": 13,
+   "original": "DAVID"
+  },
+  {
+   "locator": "PBXlqtRQwJ1yRgrZ-PBGsmwgM1JByC70M-LBtFrghzf6xtLCmK",
+   "type": "text",
+   "role": "heading",
+   "asset": null,
+   "personal": false,
+   "column_px": 433,
+   "max_len": null,
+   "original": "&"
+  },
+  {
+   "locator": "PBXlqtRQwJ1yRgrZ-PBGsmwgM1JByC70M-LB0D9bWRP06rt1pV",
+   "type": "text",
+   "role": "heading",
+   "asset": null,
+   "personal": true,
+   "column_px": 433,
+   "max_len": 13,
+   "original": "MARIA"
+  },
+  {
+   "locator": "PBXlqtRQwJ1yRgrZ-PBGsmwgM1JByC70M-LB7jypSRmDtQWwsg",
+   "type": "text",
+   "role": "caption",
+   "asset": null,
+   "personal": false,
+   "column_px": 433,
+   "max_len": null,
+   "original": "open"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LB8pDRc6W62dpK1x",
+   "type": "text",
+   "role": "heading_light",
+   "asset": null,
+   "personal": true,
+   "column_px": 433,
+   "max_len": 13,
+   "original": "DAVID"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBp8TByGcwHlSLvb",
+   "type": "text",
+   "role": "heading_light",
+   "asset": null,
+   "personal": false,
+   "column_px": 433,
+   "max_len": null,
+   "original": "&"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBBR8XdHjNC5rZYy",
+   "type": "text",
+   "role": "heading_light",
+   "asset": null,
+   "personal": true,
+   "column_px": 433,
+   "max_len": 13,
+   "original": "MARIA"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LB4vtVTY726M0RFb",
+   "type": "text",
+   "role": "script_light",
+   "asset": null,
+   "personal": false,
+   "column_px": 433,
+   "max_len": null,
+   "original": "Wedding"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBrvyMZbNKfnX56T",
+   "type": "text",
+   "role": "body_light",
+   "asset": null,
+   "personal": false,
+   "column_px": 433,
+   "max_len": null,
+   "original": "THE"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBr2rdMk4cRqs9N5",
+   "type": "text",
+   "role": "body_light",
+   "asset": null,
+   "personal": false,
+   "column_px": 433,
+   "max_len": null,
+   "original": "OF"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LB3jYgPSwwDfJVMH",
+   "type": "text",
+   "role": "monogram_light",
+   "asset": null,
+   "personal": true,
+   "column_px": 433,
+   "max_len": 9,
+   "original": "M"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBmsT4bxhdp3CN9z",
+   "type": "text",
+   "role": "heading_light",
+   "asset": null,
+   "personal": true,
+   "column_px": 433,
+   "max_len": 9,
+   "original": "D"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBC2DSNHJZPmHNBD",
+   "type": "text",
+   "role": "date_light",
+   "asset": null,
+   "personal": true,
+   "column_px": 433,
+   "max_len": 18,
+   "original": "17.04.2028"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB74jDrfyLYQSdW6-LBlqrsb7B8HsgRKR",
+   "type": "text",
+   "role": "heading",
+   "asset": null,
+   "personal": false,
+   "column_px": 432,
+   "max_len": null,
+   "original": "DEAR FAMILY & FRIENDS"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB74jDrfyLYQSdW6-LB0MPjXhlNNVdnZn",
+   "type": "text",
+   "role": "body",
+   "asset": null,
+   "personal": false,
+   "column_px": 432,
+   "max_len": null,
+   "original": "We’re so excited to share this\n special moment of our lives with you.\n Here you’ll find all the details about our big day — from the ceremony and reception to travel information, accommodations, and more.\n\nWith Love,"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB74jDrfyLYQSdW6-LB7R5KMkMhSq7MyF",
+   "type": "text",
+   "role": "script",
+   "asset": null,
+   "personal": true,
+   "column_px": 432,
+   "max_len": 21,
+   "original": "David & Maria"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB74jDrfyLYQSdW6-LB9HxsZyLPfvyMLc",
+   "type": "text",
+   "role": "caption",
+   "asset": null,
+   "personal": false,
+   "column_px": 432,
+   "max_len": null,
+   "original": "CLICK TO PLAY"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBHdqXf19yPGTShP-LBQnFM0X5DyDLZpn",
+   "type": "text",
+   "role": "script_light",
+   "asset": null,
+   "personal": false,
+   "column_px": 571,
+   "max_len": null,
+   "original": "Our Love Story"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBHdqXf19yPGTShP-LBxKXGczPTnhY5kQ",
+   "type": "text",
+   "role": "body_light",
+   "asset": null,
+   "personal": false,
+   "column_px": 571,
+   "max_len": null,
+   "original": "David and Maria’s story began with a simple meeting that quickly turned into something extraordinary. Through love, laughter, and countless memories, they found not only their forever partner, but also their best friend. Now, they are so excited to celebrate this beautiful new chapter surrounded by the people they love most."
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBQhvdg6tg6DKgYw",
+   "type": "text",
+   "role": "heading",
+   "asset": null,
+   "personal": false,
+   "column_px": 432,
+   "max_len": null,
+   "original": "Save"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBHSSmwBrNnF5DWj",
+   "type": "text",
+   "role": "body",
+   "asset": null,
+   "personal": false,
+   "column_px": 432,
+   "max_len": null,
+   "original": "THE"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBvNPnDlmzLpMzlq",
+   "type": "text",
+   "role": "heading",
+   "asset": null,
+   "personal": false,
+   "column_px": 432,
+   "max_len": null,
+   "original": "Date"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LB0lzGXjTJBYf8n7",
+   "type": "text",
+   "role": "heading",
+   "asset": null,
+   "personal": true,
+   "column_px": 432,
+   "max_len": 24,
+   "original": "APRIL • 2027"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBHfwr3b15pxKCnG",
+   "type": "text",
+   "role": "calendar",
+   "asset": null,
+   "personal": false,
+   "column_px": 432,
+   "max_len": null,
+   "original": "S"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBPfzzkNrVlJrVvR",
+   "type": "text",
+   "role": "calendar",
+   "asset": null,
+   "personal": false,
+   "column_px": 432,
+   "max_len": null,
+   "original": "M"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LB3fRXnQL5zrFQSd",
+   "type": "text",
+   "role": "calendar",
+   "asset": null,
+   "personal": false,
+   "column_px": 432,
+   "max_len": null,
+   "original": "T"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBg2H3VnLjRjCPVr",
+   "type": "text",
+   "role": "calendar",
+   "asset": null,
+   "personal": false,
+   "column_px": 432,
+   "max_len": null,
+   "original": "W"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBjrr0XxCm2n702V",
+   "type": "text",
+   "role": "calendar",
+   "asset": null,
+   "personal": false,
+   "column_px": 432,
+   "max_len": null,
+   "original": "T"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LB2Wxs9255C1CZx6",
+   "type": "text",
+   "role": "calendar",
+   "asset": null,
+   "personal": false,
+   "column_px": 432,
+   "max_len": null,
+   "original": "F"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBHcFn9YY417Tkvt",
+   "type": "text",
+   "role": "calendar",
+   "asset": null,
+   "personal": false,
+   "column_px": 432,
+   "max_len": null,
+   "original": "S"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBy9pgnQBvdmFpCS",
+   "type": "text",
+   "role": "heading",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "Ceremony & RECEPTION "
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBKqQ0sngjs3FDGN",
+   "type": "text",
+   "role": "script",
+   "asset": null,
+   "personal": true,
+   "column_px": 899,
+   "max_len": 21,
+   "original": "Villa Erba"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBdj1ljzMbQ0NJZY",
+   "type": "text",
+   "role": "body",
+   "asset": null,
+   "personal": true,
+   "column_px": 899,
+   "max_len": 37,
+   "original": " Cernobbio, Lake Como, Italyno"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBpHpwsPWQhJzq0S",
+   "type": "text",
+   "role": "body",
+   "asset": null,
+   "personal": true,
+   "column_px": 899,
+   "max_len": 63,
+   "original": "Saturday, APRIL 17, 2027\nat five in the afternoon"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBfYghRjkdKhDSkl",
+   "type": "text",
+   "role": "body",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "Location"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBql7flKS6p2yS8W",
+   "type": "text",
+   "role": "heading",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "WEDDING TIME LINE"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LB8vhn5wLqs8XblF",
+   "type": "text",
+   "role": "time",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "08:00 AM"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBSr7TprGQXlfKMX",
+   "type": "text",
+   "role": "label",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "Guest Arrival"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LB4TZ8JBQmpLJ2g3",
+   "type": "text",
+   "role": "time",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "09:00 AM"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBwmWLGlftBpYpTS",
+   "type": "text",
+   "role": "label",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "Wedding Ceremony"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBZZZ5PY6mrKzZxd",
+   "type": "text",
+   "role": "time",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "10:00 AM"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBbh29GjVyz4rY4Z",
+   "type": "text",
+   "role": "label",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "Congratulations & Group Photos"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBj9K2RlvVMfJkbW",
+   "type": "text",
+   "role": "time",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "12:00 PM"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBCrSSPNXBg4Dz04",
+   "type": "text",
+   "role": "label",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "Lunch Reception"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LB8PvCcsPwQnrQXC",
+   "type": "text",
+   "role": "time",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "02:00 PM "
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LB504G33Jrq2QHt7",
+   "type": "text",
+   "role": "label",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "Couple Entrance & First Dance"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBSCVV8bsPFYXmY0",
+   "type": "text",
+   "role": "time",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "03:30 PM"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LB24pQhnFN9QBCTm",
+   "type": "text",
+   "role": "label",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "Cake Cutting Ceremony"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LB4ksxHDRQ83yvZD",
+   "type": "text",
+   "role": "time",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "05:00 PM"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBBNZKzbyRLNnlSn",
+   "type": "text",
+   "role": "label",
+   "asset": null,
+   "personal": false,
+   "column_px": 899,
+   "max_len": null,
+   "original": "Closing & Farewell"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LBvXGKy0Lj7gp9Y0",
+   "type": "text",
+   "role": "heading",
+   "asset": null,
+   "personal": false,
+   "column_px": 975,
+   "max_len": null,
+   "original": "Attire"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LBsstc9LTNsklBl6",
+   "type": "text",
+   "role": "body",
+   "asset": null,
+   "personal": false,
+   "column_px": 975,
+   "max_len": null,
+   "original": "We warmly invite our guests to dress in elegant garden-inspired attire in soft neutrals, muted hues, or timeless classic tones"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LB6ygBpt7pBZDdLv",
+   "type": "text",
+   "role": "heading",
+   "asset": null,
+   "personal": false,
+   "column_px": 975,
+   "max_len": null,
+   "original": "Accommodation\n"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LBtWNF4j32RLZZ8s",
+   "type": "text",
+   "role": "body",
+   "asset": null,
+   "personal": false,
+   "column_px": 975,
+   "max_len": null,
+   "original": "To ensure a seamless and memorable stay for our cherished guests, we have thoughtfully reserved room blocks at a selection of elegant hotels in Italy:"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LBvFQfZdKJ7gN15n",
+   "type": "text",
+   "role": "script",
+   "asset": null,
+   "personal": true,
+   "column_px": 975,
+   "max_len": 25,
+   "original": "Villa d'Este"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LB14RRw5yQQCLZB4",
+   "type": "text",
+   "role": "body",
+   "asset": null,
+   "personal": false,
+   "column_px": 975,
+   "max_len": null,
+   "original": "A legendary lakeside sanctuary renowned for its timeless luxury and enchanting Lake Como views."
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LBYBrgYyyFQjrCh9",
+   "type": "text",
+   "role": "label",
+   "asset": null,
+   "personal": false,
+   "column_px": 975,
+   "max_len": null,
+   "original": "\nbook here\n"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LB0qGgZbpwyKBfX0",
+   "type": "text",
+   "role": "script",
+   "asset": null,
+   "personal": true,
+   "column_px": 975,
+   "max_len": 24,
+   "original": "Hotel Miralago "
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LB6Zh3BmfVc7LtYx",
+   "type": "text",
+   "role": "body",
+   "asset": null,
+   "personal": false,
+   "column_px": 975,
+   "max_len": null,
+   "original": "An elegant boutique stay nestled in the heart of Cernobbio, moments from Villa Erba."
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LBS0dPtr0yHnnM05",
+   "type": "text",
+   "role": "label",
+   "asset": null,
+   "personal": false,
+   "column_px": 975,
+   "max_len": null,
+   "original": "\nbook here\n"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LB19QYdz3tTcdf06",
+   "type": "text",
+   "role": "body",
+   "asset": null,
+   "personal": true,
+   "column_px": 975,
+   "max_len": 149,
+   "original": "A limited number of rooms are available at exclusive preferred rates.\n Kindly mention ANTHONY&CHARLOTTE Wedding when making your reservation."
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB0yWdvQxNhGZPZQ-LBCSLK3lgBvLZPWM",
+   "type": "text",
+   "role": "heading",
+   "asset": null,
+   "personal": false,
+   "column_px": 509,
+   "max_len": null,
+   "original": "Please Rsvp"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB0yWdvQxNhGZPZQ-LBtNL4xsqQ0Hr2jC",
+   "type": "text",
+   "role": "body",
+   "asset": null,
+   "personal": true,
+   "column_px": 509,
+   "max_len": 80,
+   "original": "Kindly let us know if you’ll be joining the celebration by 17 JULY, 2026"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB0yWdvQxNhGZPZQ-LB5zj8ZzL4bHPJxm",
+   "type": "text",
+   "role": "body",
+   "asset": null,
+   "personal": true,
+   "column_px": 509,
+   "max_len": 74,
+   "original": "or any questions, please contact us at:\nANTHONYCHARLOTTE@gmail.com"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB8rV2yHB467ffCP-LBmSj3C9V8LkCKgq",
+   "type": "text",
+   "role": "heading_light",
+   "asset": null,
+   "personal": false,
+   "column_px": 634,
+   "max_len": null,
+   "original": "Wedding Registry"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB8rV2yHB467ffCP-LBfmYgR80PZgBhjs",
+   "type": "text",
+   "role": "body_light",
+   "asset": null,
+   "personal": false,
+   "column_px": 634,
+   "max_len": null,
+   "original": "Your presence is the greatest gift of all.\n While gifts are not expected, those who wish may visit our Amazon registry or contribute toward our home."
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB8rV2yHB467ffCP-LBxsjGtbhwP7C1dG",
+   "type": "text",
+   "role": "body_light",
+   "asset": null,
+   "personal": false,
+   "column_px": 634,
+   "max_len": null,
+   "original": "\nAmazon\n"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBZRYcwtckqDgbPS",
+   "type": "text",
+   "role": "monogram_light",
+   "asset": null,
+   "personal": true,
+   "column_px": 576,
+   "max_len": 9,
+   "original": "D"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBb0KVGWTRzhmr0G",
+   "type": "text",
+   "role": "script_light",
+   "asset": null,
+   "personal": true,
+   "column_px": 576,
+   "max_len": 9,
+   "original": "M"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBhKmd2QQFNRZQtk",
+   "type": "text",
+   "role": "heading_light",
+   "asset": null,
+   "personal": true,
+   "column_px": 576,
+   "max_len": 13,
+   "original": "DAVID"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBh6SKFMMS9BMWBG",
+   "type": "text",
+   "role": "heading_light",
+   "asset": null,
+   "personal": false,
+   "column_px": 576,
+   "max_len": null,
+   "original": "&"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBp4bPRcxF0Wvx2f",
+   "type": "text",
+   "role": "heading_light",
+   "asset": null,
+   "personal": true,
+   "column_px": 576,
+   "max_len": 13,
+   "original": "MARIA"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBfmDmTStmp27MC2",
+   "type": "text",
+   "role": "script",
+   "asset": null,
+   "personal": false,
+   "column_px": 576,
+   "max_len": null,
+   "original": "Thank You"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LB0tdKv7mD5JxVcm",
+   "type": "text",
+   "role": "body",
+   "asset": null,
+   "personal": false,
+   "column_px": 576,
+   "max_len": null,
+   "original": "BACK"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-A1",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-B1",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-C1",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-D1",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-E1",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-F1",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "1"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-G1",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "2"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-A2",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "3"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-B2",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "4"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-C2",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "5"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-D2",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "6"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-E2",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "7"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-F2",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "8"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-G2",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "9"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-A3",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "10"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-B3",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "11"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-C3",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "12"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-D3",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "13"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-E3",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "14"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-F3",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "15"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-G3",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "16"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-A4",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "17"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-B4",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "18"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-C4",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "19"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-D4",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "20"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-E4",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "21"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-F4",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "22"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-G4",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "23"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-A5",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "24"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-B5",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "25"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-C5",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "26"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-D5",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "27"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-E5",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "28"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-F5",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "29"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-G5",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "30"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-A6",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": "31"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-B6",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-C6",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-D6",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-E6",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-F6",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBxhfzk8VVsmFczv-G6",
+   "type": "table_cell",
+   "role": "calendar",
+   "asset": null,
+   "personal": true,
+   "column_px": 62,
+   "max_len": 2,
+   "original": null
+  },
+  {
+   "locator": "PBXlqtRQwJ1yRgrZ-PBGsmwgM1JByC70M",
+   "type": "image",
+   "role": "envelope",
+   "asset": "envelope_cover",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null,
+   "layer": "cover"
+  },
+  {
+   "locator": "PBXlqtRQwJ1yRgrZ-PBGsmwgM1JByC70M-LBKQqWFQphxMY3SP",
+   "type": "image",
+   "role": "seal",
+   "asset": "seal",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy",
+   "type": "image",
+   "role": "hero",
+   "asset": "photo_hero",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBxkXqpGlkL367LG",
+   "type": "image",
+   "role": "decor",
+   "asset": "wreath_light",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBmJ0j4Mjn92TQ1W-LBCP6sJYgYKMmktZ",
+   "type": "image",
+   "role": "envelope",
+   "asset": "overlay_body",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null,
+   "layer": "body"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBmJ0j4Mjn92TQ1W-LBY8BzNn0xWVgW4C",
+   "type": "image",
+   "role": "envelope",
+   "asset": "overlay_flap",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null,
+   "layer": "flap"
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB74jDrfyLYQSdW6",
+   "type": "image",
+   "role": "paper",
+   "asset": "paper_tall",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB74jDrfyLYQSdW6-LBgS2d724sY07gbF",
+   "type": "image",
+   "role": "card",
+   "asset": "letter_card",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB74jDrfyLYQSdW6-LB17tt1t3vPffMgc",
+   "type": "image",
+   "role": "decor",
+   "asset": "sprig_tall",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB74jDrfyLYQSdW6-LBSxjQxNtz3NLXxp",
+   "type": "image",
+   "role": "decor",
+   "asset": "vinyl",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB74jDrfyLYQSdW6-LBCb5dhKGGjfrwcJ",
+   "type": "image",
+   "role": "story",
+   "asset": "photo_story",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBHdqXf19yPGTShP",
+   "type": "image",
+   "role": "story",
+   "asset": "photo_story",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBHdqXf19yPGTShP-LBdHhjlFsbyk3zN3",
+   "type": "image",
+   "role": "decor",
+   "asset": "rings",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP",
+   "type": "image",
+   "role": "paper",
+   "asset": "paper_tall",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx",
+   "type": "image",
+   "role": "paper",
+   "asset": "paper_tall",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBv2Mlj1BfhRHrGb",
+   "type": "image",
+   "role": "venue",
+   "asset": "photo_venue",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBrQhLnD0DwlcBJK",
+   "type": "image",
+   "role": "venue",
+   "asset": "photo_venue",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LB1ltHzGW5CbFHqX",
+   "type": "image",
+   "role": "icon",
+   "asset": "pin",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBW2ldpxFPWFmXNR",
+   "type": "image",
+   "role": "icon",
+   "asset": "pin",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBpq4C0hJ9HwdzD3",
+   "type": "image",
+   "role": "bullet",
+   "asset": "bullet",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LB4NQ5xmsgN5rcCw",
+   "type": "image",
+   "role": "bullet",
+   "asset": "bullet",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LB78ZsBzKlgppzyR",
+   "type": "image",
+   "role": "bullet",
+   "asset": "bullet",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBrFXzXcmcf0cjRV",
+   "type": "image",
+   "role": "bullet",
+   "asset": "bullet",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBLNtMZrtVXp0fbM",
+   "type": "image",
+   "role": "bullet",
+   "asset": "bullet",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBvy8bjYpSTTHn2k",
+   "type": "image",
+   "role": "bullet",
+   "asset": "bullet",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBsylcqx4Zx8nHBw",
+   "type": "image",
+   "role": "bullet",
+   "asset": "bullet",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk",
+   "type": "image",
+   "role": "paper",
+   "asset": "paper_tall",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LBrJd9fJBbPxF7vT",
+   "type": "image",
+   "role": "hotel",
+   "asset": "photo_hotel",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LBNrHTGFd2pZ304z",
+   "type": "image",
+   "role": "divider",
+   "asset": "divider_leaf",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB0yWdvQxNhGZPZQ",
+   "type": "image",
+   "role": "paper",
+   "asset": "paper_tall",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB8rV2yHB467ffCP",
+   "type": "image",
+   "role": "registry",
+   "asset": "photo_registry",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG",
+   "type": "image",
+   "role": "paper",
+   "asset": "paper_tall",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBXbN3cHrJVWcr6c",
+   "type": "image",
+   "role": "decor",
+   "asset": "wreath_sage",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBMG4Nm4V6pdyfB0",
+   "type": "image",
+   "role": "couple",
+   "asset": "photo_couple",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBk5WNyktq95LJP9-PBY4z7z7mp3tK5JN-LBXg0nzgTnL94LfC-LBCY01218P3HVQSD",
+   "type": "image",
+   "role": "envelope",
+   "asset": "overlay_body",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null,
+   "layer": "body"
+  },
+  {
+   "locator": "PBk5WNyktq95LJP9-PBY4z7z7mp3tK5JN-LBXg0nzgTnL94LfC-LBj14xRcFGWTQlbx",
+   "type": "image",
+   "role": "envelope",
+   "asset": "overlay_flap",
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null,
+   "layer": "flap"
+  },
+  {
+   "locator": "PBXlqtRQwJ1yRgrZ-PBGsmwgM1JByC70M-LBgwWjK0jXKKJWCn",
+   "type": "colour",
+   "role": "divider",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB74jDrfyLYQSdW6-LBmfLJlzBylwxTb6",
+   "type": "colour",
+   "role": "divider",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBVvHXT4HlW7rYjY",
+   "type": "colour",
+   "role": "card",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBppRmZcWVcQBV5k",
+   "type": "colour",
+   "role": "paper_cover",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBkBn9nXs8sYTQgx",
+   "type": "colour",
+   "role": "paper_cover",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LBdkLjZVv73Kb0vD",
+   "type": "colour",
+   "role": "accent",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBjwmtbKmfHsr5BK",
+   "type": "colour",
+   "role": "divider",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBPGrPM4T6p3MbdX",
+   "type": "colour",
+   "role": "rule",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBjWjX1P090Ksvr2",
+   "type": "colour",
+   "role": "rule",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBnnCm4g1DzlHD1t",
+   "type": "colour",
+   "role": "rule",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBnFds7dMlqFWlgd",
+   "type": "colour",
+   "role": "rule",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBZNBzY0yy6mQ2fr",
+   "type": "colour",
+   "role": "rule",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBdqW6pycbgKqHlx-LBJRzy5NZNpP7KJT",
+   "type": "colour",
+   "role": "rule",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LBzGmgsmwS8NhQ8R",
+   "type": "colour",
+   "role": "swatch_1",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LBqW4M0n2WB2VwZp",
+   "type": "colour",
+   "role": "swatch_2",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LBXhXCyn5qK3ScDL",
+   "type": "colour",
+   "role": "swatch_3",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LBwgQKSyFLpvMjZx",
+   "type": "colour",
+   "role": "swatch_4",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LBH5VZndH9ZhCM47",
+   "type": "colour",
+   "role": "button_frame",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBNxMQnfcNSk5MPk-LBXh56vDRs0WVzm0",
+   "type": "colour",
+   "role": "button_frame",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PB0yWdvQxNhGZPZQ-LBsGp2JHsMBYY0Vn",
+   "type": "colour",
+   "role": "divider",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBB6kjfjc1CBFbvW",
+   "type": "colour",
+   "role": "divider",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  },
+  {
+   "locator": "PBw4SHZw3cbPHqdd-PBl66PTSNPqsDbzG-LBGyNV97tC0Dwhyv",
+   "type": "colour",
+   "role": "button_frame",
+   "asset": null,
+   "personal": false,
+   "column_px": null,
+   "max_len": null,
+   "original": null
+  }
+ ],
+ "envelope": {
+  "section_px": [
+   1366,
+   964
+  ],
+  "tip": [
+   683,
+   610
+  ],
+  "left_top": [
+   0,
+   60
+  ],
+  "right_top": [
+   1366,
+   60
+  ],
+  "seal_centre": [
+   683,
+   623
+  ],
+  "seal_size": [
+   160,
+   198
+  ],
+  "seal_rot_canva": -3.4,
+  "seal_asset": "seal"
+ },
+ "protected": [
+  "PBw4SHZw3cbPHqdd-PB0yWdvQxNhGZPZQ-LBTf8KJKWgQwHwvM",
+  "PBw4SHZw3cbPHqdd-PB74jDrfyLYQSdW6-LBT5lV4XR44J1qb7",
+  "PBw4SHZw3cbPHqdd-PBb0Thf13p3S4fmP-LB922hZgt4dF1wPk",
+  "PBw4SHZw3cbPHqdd-PBDtBVS3KYL7J9dy-LBmJ0j4Mjn92TQ1W",
+  "PBk5WNyktq95LJP9-PBY4z7z7mp3tK5JN-LBXg0nzgTnL94LfC"
+ ]
+}
