@@ -1,5 +1,6 @@
 ---
 name: studio
+disable-model-invocation: true
 description: Run the next job of the wedding-template studio. The owner types /studio (optionally followed by the studio root folder) after pressing a button in the studio page; Claude takes the oldest job from jobs/pending/, executes it (map a skeleton, propose styles, write texts, write a template into Canva, verify it) and files the result.
 ---
 
@@ -34,6 +35,9 @@ Argument of this invocation (may be empty): `$ARGUMENTS`
 - The Canva connector tools are deferred tools: load them with ToolSearch before first use. Their names (PLAYBOOK §3):
   `read-design`, `edit-design`, `copy-design`, `export-design`, `get-export-formats`, `create-upload-url`,
   `get-assets`, `search-designs`, `help`. Use no other Canva tool.
+  Every Canva call (`read-design`, `edit-design` including `cancel` and `commit`, `copy-design`, `export-design`, `get-export-formats`,
+  `create-upload-url`, `get-assets`) passes `user_intent` (mandatory in the connector's schema): one concise sentence, at most 255
+  characters, e.g. `Studio job <id>: reading the copy to measure it`.
 
 ## HARD LIMITS (every Canva job; repeated at the top of apply_canva.md, verify.md and map_skeleton.md)
 
@@ -69,9 +73,12 @@ Argument of this invocation (may be empty): `$ARGUMENTS`
 `mkdir -p ROOT/jobs/{pending,running,done,failed}`. List `ROOT/jobs/running/*.json`. If there is one (several: take the
 oldest by file name, tell the owner about the others), it is an interrupted job:
 
-1. Run the precheck (step 1.3) on it. If it fails, go to 1.6 (failed) with that reason.
-2. If `BASE/jobs/<id>.result.json` already exists: it is valid only if the `write_result` snippet's checks hold
-   (re-run it on the file's content as a draft); then do just step 1.6 with its `status`. No other work.
+1. FIRST, before any precheck: if `BASE/jobs/<id>.result.json` already exists (the earlier run stopped between the result and the move;
+   the studio may meanwhile have moved the step on to `review`, so the precheck would now refuse a job that is in fact finished), check
+   it with the `write_result` snippet (1.5), giving the EXISTING result file as the draft argument and `--validate-only` as a fifth argument.
+   Valid (exit 0) → no precheck, no Canva call, no instruction file: just file the job by that result's `status` (1.6) and tell the
+   owner (1.7). Invalid → never overwrite it: write `BASE/jobs/<id>.refused.note.txt` (Ukrainian: what is wrong) and file the job as failed (1.6).
+2. Otherwise run the precheck (1.3). If it fails: write the result (1.5), then file the job (1.6).
 3. Read `BASE/jobs/<id>.notes.md` and the instruction file for the type.
    - `style_directions`, `write_texts`: no Canva involved and idempotent — restart the instruction from its top.
    - `map_skeleton`: restart from its top (reads only; existing thumbnails are kept, never overwritten).
@@ -236,11 +243,11 @@ PYEOF
 ```
 
 Read its JSON output. `"ok": true` → continue. `"ok": false` → do NOT open the instruction file's Canva steps, do not
-call any Canva tool; go to 1.6 with status `failed`, `summary` = the reasons in Ukrainian,
+call any Canva tool; write the result (1.5), then file the job (1.6): status `failed`, `summary` = the reasons in Ukrainian,
 `outputs` = `{"refused": true, "reasons": [<the reasons verbatim>]}` and one check
 `{"name": "target_check", "passed": false, "detail": "<reasons>"}`. (A precheck that printed no JSON, or crashed, is also a
 failure: the job is not executed; if the job file itself is unreadable, write `ROOT/jobs/failed/<job id>.note.txt` and file
-the job as failed.) After an `"ok": true`: create the work folder and the notes file
+the job as failed. If a result already exists, `write_result` refuses to overwrite it: write `BASE/jobs/<job id>.refused.note.txt` with the reasons instead.) After an `"ok": true`: create the work folder and the notes file
 (`mkdir -p BASE/work/ID BASE/jobs`; first line `<UTC time> started`, then the `target` and `skeleton_design_id` it compared).
 After every finished phase append one line to the notes:
 `echo "$(date -u +%FT%TZ) <phase>: <ids, counts, file names>" >> BASE/jobs/ID.notes.md`. A "target check" that approves is also a claim: print the two ids it compared
@@ -269,7 +276,9 @@ atomically (temp file + rename) with the snippet. It also enforces per type: `ap
 without a recorded copy id as failed, R19); `style_directions` done needs 2-3 directions, each valid against the map;
 `write_texts` done needs a valid `texts.json`; `map_skeleton` done needs a valid `map.json`. If it asserts,
 fix the draft; if you cannot, set `status` to `failed` and say why. If the result folder does not exist (unknown
-template), write `ROOT/jobs/failed/<job id>.note.txt` instead.
+template), write `ROOT/jobs/failed/<job id>.note.txt` instead. The snippet NEVER overwrites an existing result file (it exits non-zero
+with a clear message): then write `BASE/jobs/<job id>.refused.note.txt` (Ukrainian, what you would have written) and file the job by the
+existing result's `status`.
 
 ```bash
 PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
@@ -318,6 +327,10 @@ if ok and jtype == "map_skeleton":
     problems = schema.validate_map(read_json(sdir / "map.json"))
     assert problems == [], problems
 dest = base / "jobs" / f"{job['id']}.result.json"
+if "--validate-only" in sys.argv[5:]:                  # the draft IS an existing result file: validate it, write nothing
+    print(f"valid: {draft['status']}, {len(draft['checks'])} checks")
+    sys.exit(0)
+assert not dest.exists(), f"{dest} already exists: a result is never overwritten (write <id>.refused.note.txt and file the job by that result)"
 write_json_atomic(dest, draft)                        # temp file + rename
 print(f"wrote {dest}: status {draft['status']}, {len(draft['checks'])} checks, {sum(not c['passed'] for c in draft['checks'])} failed")
 PYEOF

@@ -48,7 +48,7 @@ looks wrong) goes into the result and `manual_steps`; fixing it is a new apply j
 
 ### 1. Read the copy (read only)
 
-`read-design`, `design_id` = `D`, `open_transaction: true`, `filter: {"fields": ["design_content"]}`; save the content to
+`read-design`, `design_id` = `D`, `user_intent`, `open_transaction: true`, `filter: {"fields": ["design_content"]}`; save the content to
 `$W/read.json`; end the transaction at once: `edit-design` with that `transaction_id` and `finalize: "cancel"` (no operations).
 Then:
 
@@ -75,7 +75,7 @@ cd "$CODE" && $PY -I canva/facts.py dump "$W/read.json" "$W/facts_now.json" && $
 
 ### 3. Export every page, slice, look
 
-1. `get-export-formats` for `D`; confirm `png` is available and which page numbers.
+1. (Every Canva call passes `user_intent`, see SKILL.md §0.) `get-export-formats` for `D`; confirm `png` is available and which page numbers.
 2. `export-design` for each page number `i` of the map (`pages` in the map, field `index`): `design_id` = `D`,
    `format: {"type": "png", "pages": [i]}` → a download URL. Download only these URLs, only for `D`:
    `mkdir -p "$W/export" && curl -sS -o "$W/export/page_<i>.png" "<download url>"`. Check each file opens

@@ -72,6 +72,7 @@ class StructureTests(unittest.TestCase):
     def test_frontmatter(self):
         fm = frontmatter(read("SKILL.md"))
         self.assertEqual(fm.get("name"), "studio")
+        self.assertEqual(fm.get("disable-model-invocation"), "true", "a Canva-writing skill runs only when the owner types /studio")
         self.assertTrue(fm.get("description", "").strip())
         self.assertEqual(frontmatter("no front matter here"), {})                     # control
 
@@ -106,6 +107,22 @@ class StructureTests(unittest.TestCase):
             self.assertIn(block, read(rel), rel)
         self.assertNotIn(block, read("jobs/write_texts.md"))                           # control: the check can say no
 
+    def test_resume_checks_the_existing_result_before_the_precheck(self):
+        skill = read("SKILL.md")
+        self.assertLess(skill.index("FIRST, before any precheck"), skill.index("Otherwise run the precheck"))
+        self.assertIn("--validate-only", skill)
+        self.assertEqual(len(re.findall(r"go to 1\.6 with status", skill)), 0, "a refusal must write the result (1.5) before filing (1.6)")
+        self.assertIn("write the result (1.5), then file the job (1.6)", skill)
+
+    def test_facts_cur_is_refreshed_after_the_stress_test_and_intent_is_passed(self):
+        apply = read("jobs/apply_canva.md")
+        self.assertIn("cp $W/facts_restored.json $W/facts_cur.json", apply)
+        self.assertIn("INVARIANT", apply)
+        self.assertNotIn("`is_editable: true`", apply)
+        self.assertIn("`isEditable`", apply)
+        for rel in ("SKILL.md", "jobs/apply_canva.md", "jobs/verify.md", "jobs/map_skeleton.md"):
+            self.assertIn("user_intent", read(rel), rel)
+
     def test_no_placeholders(self):
         for rel in FILES:
             self.assertEqual(placeholders(read(rel)), [], rel)
@@ -114,9 +131,9 @@ class StructureTests(unittest.TestCase):
 
     def test_every_snippet_is_present_once_and_no_marker_is_left(self):
         found = snippets()
-        self.assertGreaterEqual(len(found), 16)
+        self.assertGreaterEqual(len(found), 17)
         for name in ("precheck", "write_result", "set_copy_id", "map_check", "old_media", "marker", "calendar_cells",
-                     "adjust_sizes", "reset_texts"):
+                     "adjust_sizes", "reset_texts", "roles_covered"):
             self.assertIn(name, found)
         for rel in FILES:
             self.assertNotIn("@@", read(rel), rel)
@@ -243,20 +260,76 @@ class SnippetTests(unittest.TestCase):
         facts[loc]["text"] = "SOMETHING WRITTEN EARLIER"
         facts[loc]["regions"][0]["chars"] = "SOMETHING WRITTEN EARLIER"
         (self.root / "cur.json").write_text(json.dumps(facts), encoding="utf-8")
+        write_json_atomic(self.root / "skeletons" / "sk" / "map.json", m)
+        write_json_atomic(self.tdir / "texts.json", json.loads((FX / "texts_sage.json").read_text(encoding="utf-8")))
         args = [FX / "map_sage.json", FX / "style_sage.json", FX / "texts_sage.json"]
 
         def build(facts_file, out):
             return subprocess.run([sys.executable, "-I", "canva/ops.py", "build", *map(str, args), str(facts_file), str(out)],
                                   capture_output=True, text=True, cwd=ROOT)
+
+        def reset():
+            return self.run_snippet("reset_texts", self.root, "tpl", FX / "map_sage.json", self.root / "cur.json",
+                                    FX / "facts_orig.json", self.root / "fb.json", self.root / "hand.json")
         bad = build(self.root / "cur.json", self.root / "o1")
         self.assertNotEqual(bad.returncode, 0)                                         # the limitation the workaround exists for
         self.assertIn("the design holds", bad.stdout)
-        r = self.run_snippet("reset_texts", FX / "map_sage.json", self.root / "cur.json", FX / "facts_orig.json", self.root / "fb.json")
+        r = reset()
         self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads((self.root / "hand.json").read_text(encoding="utf-8")), [loc])   # a hand edit is reported
         good = build(self.root / "fb.json", self.root / "o2")
         self.assertEqual(good.returncode, 0, good.stdout)
         ops = [op for f in (self.root / "o2").glob("ops_P*.json") for op in json.loads(f.read_text(encoding="utf-8"))["operations"]]
         self.assertTrue(any(o["type"] == "replace_text" and o["locator_id"] == loc for o in ops))
+        # control: when the text in the copy is what an earlier apply wrote (its job file records it), it is NOT a hand edit
+        (self.root / "jobs" / "done").mkdir(parents=True)
+        write_json_atomic(self.root / "jobs" / "done" / "20261101T000000Z-apply_canva.json",
+                          {"id": "20261101T000000Z-apply_canva", "type": "apply_canva", "template": "tpl",
+                           "inputs": {"texts": {loc: "SOMETHING WRITTEN EARLIER"}}})
+        self.assertEqual(reset().returncode, 0)
+        self.assertEqual(json.loads((self.root / "hand.json").read_text(encoding="utf-8")), [])
+
+    def test_roles_covered_reports_what_validate_style_does_not_check(self):
+        style = json.loads((FX / "style_sage.json").read_text(encoding="utf-8"))
+        path = self.root / "dir.json"
+        path.write_text(json.dumps(style), encoding="utf-8")
+        r = self.run_snippet("roles_covered", ROOT, FX / "map_sage.json", path)
+        out = json.loads(r.stdout)
+        self.assertIn("text_roles_without_font_map", out)
+        bad = dict(style, font_map={})                                                 # valid for validate_style, wrong for the product
+        path.write_text(json.dumps(bad), encoding="utf-8")
+        r2 = self.run_snippet("roles_covered", ROOT, FX / "map_sage.json", path)
+        self.assertEqual(r2.returncode, 1)
+        self.assertTrue(json.loads(r2.stdout)["text_roles_without_font_map"])
+
+    def test_resumed_job_with_a_valid_result_is_filed_not_refused_and_never_overwritten(self):
+        self.set_state(approved=("style", "images", "texts"), copy_id="DANEWCOPY1")
+        st = read_json(self.tdir / "state.json")
+        st["steps"]["apply"]["status"] = "review"                                      # the studio already reconciled it
+        write_json_atomic(self.tdir / "state.json", st)
+        job = self.job("apply_canva", "DANEWCOPY1", "20261120T000020Z-apply_canva",
+                       inputs={"texts": {"a": "b"}, "chosen": {}})
+        r = self.run_snippet("write_result", ROOT, self.root, job, self.draft())
+        self.assertEqual(r.returncode, 0, r.stderr)
+        result = self.tdir / "jobs" / "20261120T000020Z-apply_canva.result.json"
+        before = result.read_bytes()
+        self.assertEqual(self.precheck(job)[0], 1, "the precheck now refuses it (step is review): that is why it must not run first")
+        check = self.run_snippet("write_result", ROOT, self.root, job, result, "--validate-only")
+        self.assertEqual(check.returncode, 0, check.stderr)
+        self.assertEqual(result.read_bytes(), before)                                  # validate-only writes nothing
+        refusal = self.run_snippet("write_result", ROOT, self.root, job,
+                                   self.draft(status="failed", summary="відхилено", outputs={"refused": True},
+                                              checks=[{"name": "target_check", "passed": False, "detail": "x"}]))
+        self.assertNotEqual(refusal.returncode, 0)
+        self.assertIn("never overwritten", refusal.stderr)
+        self.assertEqual(result.read_bytes(), before, "the valid done result must survive a refusal")
+        self.assertEqual(json.loads(before)["status"], "done")
+        # control: an INVALID existing result (done, but another copy id) must fail validation, so it is never trusted
+        bad = json.loads(before)
+        bad["outputs"]["canva_copy_id"] = "DAWRONG"
+        bad_path = self.root / "bad_result.json"
+        bad_path.write_text(json.dumps(bad), encoding="utf-8")
+        self.assertNotEqual(self.run_snippet("write_result", ROOT, self.root, job, bad_path, "--validate-only").returncode, 0)
 
     # ---- result writer and copy id ------------------------------------------------------------------------
     def draft(self, **kw):

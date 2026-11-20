@@ -56,7 +56,12 @@ connector cannot choose fonts; pages with sections have no thumbnails (commit, e
 
 - A "call" = one `edit-design` call. Operation files `*.json` written by `ops.py` hold
   `{"page_index": n, "operations": [...]}`: send EXACTLY that `page_index` and that `operations` array (copy the file
-  content, never retype), with `transaction_id`, `finalize: "keep_open"`, `is_editable: true`, `is_responsive: false`.
+  content, never retype), with `transaction_id`, `user_intent`, `finalize: "keep_open"`, `is_editable` = that page's `isEditable` from the latest `read-design`
+  output (never assume true; when it is false no operation is applied: stop and report), `is_responsive` = true only when the page's
+  `type` is `responsive` (then stop and report: this skill's operations are not valid on a responsive page).
+  Every Canva call (`read-design`, `edit-design` including `cancel` and `commit`, `copy-design`, `export-design`, `get-export-formats`,
+  `create-upload-url`, `get-assets`) passes `user_intent` (mandatory in the connector's schema): one concise sentence, at most 255
+  characters, e.g. `Studio job <id>: reading the copy to measure it`.
 - Every call ends with the same four actions (call them **VERIFY-CALL**), BEFORE the next call:
   1. save the edit result to `$W/edit_<nn>.json` (the tool saves big results itself; use that path);
   2. `cd "$CODE" && $PY -I canva/facts.py dump $W/edit_<nn>.json $W/page_<nn>.json` then
@@ -67,6 +72,9 @@ connector cannot choose fonts; pages with sections have no thumbnails (commit, e
   4. status check: `$PY -I -c 'import json,sys,collections; r=json.load(open(sys.argv[1])); o=r["edit_operation_results"]; print(len(o), collections.Counter(x.get("status") for x in o))' $W/edit_<nn>.json`
      — the count must equal the number of operations sent and no status may read error / failed / rejected / skipped.
   Then `cp $W/facts_new.json $W/facts_cur.json` (cp over your own work file is fine) and append a note line.
+  INVARIANT: `$W/facts_cur.json` always equals the design's CURRENT state. Every action that changes the state without a VERIFY-CALL
+  (a `cancel`, a restore, a commit followed by a re-read) must end with a fresh dump copied to `$W/facts_cur.json` before the next
+  `ops.py build` or `ops.py verify`; a stale `facts_cur.json` makes `ops.py verify` report every difference as an untargeted change.
   If a VERIFY-CALL finds anything you cannot explain with a verified mechanism: `edit-design` with
   `finalize: "cancel"` (discards the whole open draft), open a new transaction (step 3), rebuild the operation files
   (`ops.py build` emits only differences, so already-committed work is not repeated) and try once more; the same
@@ -149,26 +157,45 @@ cd "$CODE" && $PY -I canva/protected.py "$ROOT/skeletons/$S/map.json" "$BASE/fac
 
 ```bash
 PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
-$PY -I - "$ROOT/skeletons/$S/map.json" "$W/facts_cur.json" "$BASE/facts_orig.json" "$W/facts_for_build.json" <<'PYEOF'
+$PY -I - "$ROOT" "$T" "$ROOT/skeletons/$S/map.json" "$W/facts_cur.json" "$BASE/facts_orig.json" "$W/facts_for_build.json" "$W/overwritten_hand_edits.json" <<'PYEOF'
 # snippet: reset_texts
 import copy
 import json
 import sys
 from pathlib import Path
 
-# usage: reset_texts.py <map.json> <facts_cur.json> <facts_orig.json> <out facts_for_build.json>
-m, cur, orig = (json.loads(Path(p).read_text(encoding="utf-8")) for p in sys.argv[1:4])
+# usage: reset_texts.py <root> <template> <map.json> <facts_cur.json> <facts_orig.json> <out facts_for_build.json> <out overwritten.json>
+root, template = Path(sys.argv[1]), sys.argv[2]
+m, cur, orig = (json.loads(Path(p).read_text(encoding="utf-8")) for p in sys.argv[3:6])
+texts = json.loads((root / "templates" / template / "texts.json").read_text(encoding="utf-8"))
+prev = {}                                            # texts of the newest earlier apply job of this template (what the copy should hold)
+for folder in ("done", "failed"):
+    for f in sorted((root / "jobs" / folder).glob("*-apply_canva*.json")):
+        try:
+            j = json.loads(f.read_text(encoding="utf-8"))
+        except ValueError:
+            continue
+        if j.get("template") == template and isinstance(j.get("inputs", {}).get("texts"), dict):
+            prev = j["inputs"]["texts"]
 prot = set(m["protected"])
-out, n = copy.deepcopy(cur), 0
+out, n, hand = copy.deepcopy(cur), 0, []
 for s in m["slots"]:
     loc = s["locator"]
     if s["type"] in ("text", "table_cell") and loc not in prot and loc in cur and loc in orig:
+        have = cur[loc]["text"]
+        if have not in (orig[loc]["text"], texts.get(loc), prev.get(loc)):
+            hand.append(loc)                         # neither the skeleton's, the new, nor the previous apply's text: a hand edit
         out[loc]["text"], out[loc]["regions"] = orig[loc]["text"], copy.deepcopy(orig[loc]["regions"])
         n += 1
-Path(sys.argv[4]).write_text(json.dumps(out, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
-print(f"{n} text/cell records reset to the skeleton's wording and formatting (for ops.py build ONLY) -> {sys.argv[4]}")
+Path(sys.argv[6]).write_text(json.dumps(out, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
+Path(sys.argv[7]).write_text(json.dumps(hand, ensure_ascii=False, indent=1), encoding="utf-8")
+print(f"{n} text/cell records reset to the skeleton's wording (for ops.py build ONLY); {len(hand)} hold a hand edit that will be replaced: {hand[:5]}")
 PYEOF
 ```
+
+Hand edits in the copy are about to be replaced by the approved texts. Whatever the snippet found (count and locators, from
+`$W/overwritten_hand_edits.json`): append it to the notes, put the list in `outputs.overwritten_hand_edits` (`[]` when none, or
+when this workaround was not needed), and say the count in the Ukrainian `summary` («у копії замінено N текстів, змінених вручну»).
 
    Read `ops_notes.txt` completely; copy its
    lines about kept colour roles, unmapped texts and skipped section colours into the result `summary`/notes.
@@ -292,7 +319,7 @@ Commit first (steps 5-6), so the design on the server is the clean state. Then:
    slot's current text). Every other personal single-line slot: its own current text extended with its own
    words until it is exactly `max_len` characters (skip a slot already ≥ 90 % of `max_len`). Never touch table cells
    or paragraphs.
-3. Send it (`keep_open`), VERIFY-CALL. Dump → `$W/facts_stress.json`.
+3. Send it (`keep_open`), VERIFY-CALL. Dump → `$W/facts_stress.json`. (`$W/facts_cur.json` now describes the STRESSED design; step 5 replaces it.)
 4. `$PY -I canva/layout.py $W/facts_pre_stress.json $W/facts_stress.json $W/layout_stress.txt` must report 0 issues
    (nothing leaves the column, nothing overlaps, no centre moves), and no `size` line may show more lines after than
    before for the stressed slots (compare "~a -> ~b lines": b ≤ a after rounding). Record the numbers.
@@ -303,7 +330,9 @@ Commit first (steps 5-6), so the design on the server is the clean state. Then:
    `differing` > 0 (a diff that cannot see the stress proves nothing). If the restore diff is not 0, restore by hand: one
    call of `replace_text` operations, one per stressed locator, with `text` = that locator's text in `$W/facts_pre_stress.json`
    exactly (not `ops.py build`: it refuses a text that is neither the original nor the new one), VERIFY-CALL, commit, diff
-   again; still not 0 → check `stress_restore` failed. Cancel the empty transaction after the proof.
+   again (dump again to `$W/facts_restored.json`, then the diff); still not 0 → check `stress_restore` failed. Cancel the empty
+   transaction after the proof. THEN, in both cases: `cp $W/facts_restored.json $W/facts_cur.json` — facts_cur must describe the restored
+   design before step 8 (`ops.py images` / `ops.py verify` use it).
    The stress test is measured on data, not looked at in an export: say that in the check detail.
 
 ### 8. Phase C — pictures (PLAYBOOK Phase 6)
@@ -428,7 +457,7 @@ PYEOF
 
 `outputs` (all of it, exact keys): `canva_copy_id` (= `D`), `design_url` (`https://www.canva.com/design/<D>/edit`),
 `pages` (count), `operations` (total sent), `calls` (count), `uploads` (list of `{file, media_id}`),
-`font_size_changes` (list of `{locator, from, to}`), `recentred` (locators), `layout_boxes_changed`, `fields` (count), `manual_steps` (list of Ukrainian strings — the studio shows them
+`font_size_changes` (list of `{locator, from, to}`), `recentred` (locators), `overwritten_hand_edits` (locators, `[]` when none), `layout_boxes_changed`, `fields` (count), `manual_steps` (list of Ukrainian strings — the studio shows them
 under the apply panel), `unverified` (list of what was only computed/read: the heart position, the stress test not
 looked at in an export, the picture look until `verify`).
 

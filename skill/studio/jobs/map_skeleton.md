@@ -47,7 +47,7 @@ what this job is for; `DAHarqlqips` (the purchased original) is never read here 
 
 ### 1. Read the design (once; keep the files)
 
-`read-design`, `design_id` = `inputs.design_id`, `open_transaction: true`, `filter: {"fields": ["design_content"]}` — the only
+`read-design`, `design_id` = `inputs.design_id`, `user_intent`, `open_transaction: true`, `filter: {"fields": ["design_content"]}` — the only
 way to get element ids and positions. Save the result to `$W/read.json` (the tool saves big results itself; use that path).
 IMMEDIATELY end the transaction: `edit-design` with that `transaction_id` and `finalize: "cancel"`.
 
@@ -64,7 +64,7 @@ media ids, unknown keys — an unknown element type is reported in the result, n
 
 ### 2. Export the pages and make the thumbnails
 
-`get-export-formats`, then `export-design` once per page (`format: {"type": "png", "pages": [i]}`, `design_id` = the
+(Every Canva call passes `user_intent`, see SKILL.md §0.) `get-export-formats`, then `export-design` once per page (`format: {"type": "png", "pages": [i]}`, `design_id` = the
 skeleton's id; exporting does not change it). Download only those URLs:
 `mkdir -p "$W/export" && curl -sS -o "$W/export/page_<i>.png" "<download url>"`. Make the studio's thumbnail of each page
 (the studio shows `skeletons/<s>/sections/<page id>.png`; the snippet never overwrites an existing file — then keep it):
