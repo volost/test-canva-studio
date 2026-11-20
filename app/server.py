@@ -5,13 +5,24 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
+from app.api import Api
 from app.config import Config, load_config
 
 STATIC_DIR = (Path(__file__).parent / "static").resolve()
 HOST = "127.0.0.1"
+MAX_BODY = 5 * 1024 * 1024
 
 
-def _make_handler(cfg: Config):
+def _content_type(path: Path) -> str:
+    ctype = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    if ctype.startswith("text/") or ctype in ("application/javascript", "application/json"):
+        ctype += "; charset=utf-8"
+    return ctype
+
+
+def _make_handler(cfg: Config, api: Api):
+    skeletons, templates = (cfg.root / "skeletons").resolve(), (cfg.root / "templates").resolve()
+
     class Handler(BaseHTTPRequestHandler):
         def _send(self, status: int, content_type: str, body: bytes) -> None:
             self.send_response(status)
@@ -34,21 +45,53 @@ def _make_handler(cfg: Config):
             if not inside:
                 self._json(404, {"ok": False, "error": "not found"})
                 return
-            ctype = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
-            if ctype.startswith("text/") or ctype in ("application/javascript", "application/json"):
-                ctype += "; charset=utf-8"
-            self._send(200, ctype, target.read_bytes())
+            self._send(200, _content_type(target), target.read_bytes())
+
+        def _file(self, url_path: str) -> None:
+            """/files/<path>: only regular files inside skeletons/ and templates/ (symlinks resolved)."""
+            rel = unquote(url_path[len("/files/"):])
+            try:
+                target = (cfg.root / rel).resolve()
+                inside = target.is_file() and (target.is_relative_to(skeletons) or target.is_relative_to(templates))
+            except (OSError, ValueError):
+                inside = False
+            if not inside:
+                self._json(404, {"error": "файл не знайдено"})
+                return
+            self._send(200, _content_type(target), target.read_bytes())
+
+        def _api(self, method: str, path: str) -> None:
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                length = -1
+            if length < 0:
+                self._json(400, {"error": "некоректний Content-Length"})
+                return
+            # always drain the body (capped) so an early error does not reset the connection
+            raw = self.rfile.read(min(length, MAX_BODY + 1)) if length else b""
+            status, payload = api.handle(method, path, raw)
+            self._json(status, payload)
 
         def do_GET(self) -> None:
             path = urlsplit(self.path).path
-            if path == "/api/health":
-                self._json(200, {
-                    "ok": True,
-                    "comfy_url": cfg.comfy_url,
-                    "models_mounted": cfg.models_dir.is_dir(),
-                })
+            if path.startswith("/api/"):
+                self._api("GET", path)
+            elif path.startswith("/files/"):
+                self._file(path)
             else:
                 self._static(path)
+
+        def do_POST(self) -> None:
+            self._api("POST", urlsplit(self.path).path)
+
+        def do_PUT(self) -> None:
+            self._api("PUT", urlsplit(self.path).path)
+
+        def _not_allowed(self) -> None:
+            self._json(405, {"error": "метод не підтримується"})
+
+        do_DELETE = do_PATCH = _not_allowed  # the studio deletes nothing
 
         def log_message(self, format, *args) -> None:  # noqa: A002
             pass
@@ -56,8 +99,9 @@ def _make_handler(cfg: Config):
     return Handler
 
 
-def make_server(cfg: Config, port: int) -> ThreadingHTTPServer:
-    return ThreadingHTTPServer((HOST, port), _make_handler(cfg))
+def make_server(cfg: Config, port: int, generate_fn=None) -> ThreadingHTTPServer:
+    """`generate_fn` replaces comfy.generate in the generation queue (tests only)."""
+    return ThreadingHTTPServer((HOST, port), _make_handler(cfg, Api(cfg, generate_fn)))
 
 
 def main() -> None:
