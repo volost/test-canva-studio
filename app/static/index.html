@@ -4,9 +4,105 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Студія шаблонів</title>
+<link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<h1>Студія шаблонів</h1>
-<p>Інтерфейс з'явиться в наступній задачі.</p>
+<a class="skip" href="#main">До змісту</a>
+<header class="topbar">
+  <div class="topbar-in">
+    <a href="#/" class="brand" id="nav-home">Студія шаблонів</a>
+    <nav aria-label="Головна навігація"><a href="#/" id="nav-templates">Шаблони й скелети</a></nav>
+    <div id="health" class="health" data-test="health" aria-live="polite"></div>
+  </div>
+</header>
+
+<div id="error-banner" class="banner" role="alert" data-test="error-banner" hidden>
+  <span id="error-banner-text"></span>
+  <button type="button" id="error-banner-close" class="btn btn-small">Закрити</button>
+</div>
+
+<main id="main">
+
+  <!-- ===== Шаблони і скелети ===== -->
+  <section id="screen-home" class="screen" data-test="screen-home" aria-labelledby="home-title" hidden>
+    <h1 id="home-title">Шаблони й скелети</h1>
+    <p class="lead">Шаблон проходить п'ять кроків: стиль, картинки, тексти, запис у Canva, перевірка. Кожен крок ви затверджуєте самі.</p>
+    <div id="msg-home" class="msg" role="status" data-test="msg-home" hidden></div>
+
+    <div class="two-col">
+      <section class="card" aria-labelledby="tpl-list-title">
+        <h2 id="tpl-list-title">Шаблони</h2>
+        <div id="template-list" data-test="template-list"></div>
+        <h3>Новий шаблон</h3>
+        <form id="form-create-template" data-test="form-create-template" autocomplete="off">
+          <label for="tpl-name">Назва шаблону <span class="hint">(латиниця, цифри, дефіс; до 40 символів)</span></label>
+          <input id="tpl-name" name="name" type="text" maxlength="40" required>
+          <label for="tpl-skeleton">Скелет</label>
+          <select id="tpl-skeleton" name="skeleton" required></select>
+          <label for="tpl-brief">Бриф <span class="hint">(опишіть бажаний стиль словами)</span></label>
+          <textarea id="tpl-brief" name="brief" rows="4" required></textarea>
+          <button type="submit" id="btn-create-template" class="btn btn-primary">Створити шаблон</button>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="sk-list-title">
+        <h2 id="sk-list-title">Скелети</h2>
+        <div id="skeleton-list" data-test="skeleton-list"></div>
+        <h3>Новий скелет</h3>
+        <form id="form-create-skeleton" data-test="form-create-skeleton" autocomplete="off">
+          <label for="sk-name">Назва скелета <span class="hint">(латиниця, цифри, дефіс)</span></label>
+          <input id="sk-name" name="name" type="text" maxlength="40" required>
+          <label for="sk-design">Ідентифікатор дизайну в Canva <span class="hint">(літери, цифри, - і _)</span></label>
+          <input id="sk-design" name="design_id" type="text" required>
+          <button type="submit" id="btn-create-skeleton" class="btn btn-primary">Створити скелет</button>
+        </form>
+      </section>
+    </div>
+
+    <section class="card" aria-labelledby="jobs-title">
+      <h2 id="jobs-title">Завдання для Claude</h2>
+      <p class="hint">Завдання виконує Claude Code: у його сесії виконайте <code>/studio</code>. Список оновлюється сам кожні 3 секунди.</p>
+      <div id="template-errors" data-test="template-errors"></div>
+      <div id="jobs-panel" data-test="jobs-panel"></div>
+    </section>
+  </section>
+
+  <!-- ===== Карта скелета ===== -->
+  <section id="screen-skeleton" class="screen" data-test="screen-skeleton" aria-labelledby="sk-title" hidden>
+    <p><a href="#/" class="back">&larr; До списку</a></p>
+    <h1 id="sk-title"></h1>
+    <div id="msg-skeleton" class="msg" role="status" data-test="msg-skeleton" hidden></div>
+    <div id="skeleton-body"></div>
+  </section>
+
+  <!-- ===== Шаблон: смуга кроків і п'ять екранів ===== -->
+  <section id="screen-template" class="screen" data-test="screen-template" aria-labelledby="tpl-title" hidden>
+    <p><a href="#/" class="back">&larr; До списку</a></p>
+    <h1 id="tpl-title"></h1>
+    <p id="tpl-meta" class="hint"></p>
+    <div id="tpl-alerts" data-test="tpl-alerts"></div>
+    <nav id="step-bar" class="step-bar" data-test="step-bar" aria-label="Кроки шаблону"><ol id="step-list"></ol></nav>
+    <div id="stale-notice" class="msg msg-warn" data-test="stale-notice" hidden>
+      <span>З'явилися нові дані, але у формі є ваші незбережені зміни, тому екран не оновлено.</span>
+      <button type="button" id="btn-refresh-panel" class="btn btn-small">Оновити, відкинувши мої зміни</button>
+    </div>
+    <section id="screen-style" class="panel" data-test="screen-style" aria-labelledby="h-style" hidden></section>
+    <section id="screen-images" class="panel" data-test="screen-images" aria-labelledby="h-images" hidden></section>
+    <section id="screen-texts" class="panel" data-test="screen-texts" aria-labelledby="h-texts" hidden></section>
+    <section id="screen-apply" class="panel" data-test="screen-apply" aria-labelledby="h-apply" hidden></section>
+    <section id="screen-verify" class="panel" data-test="screen-verify" aria-labelledby="h-verify" hidden></section>
+    <section class="card" aria-labelledby="tpl-jobs-title">
+      <h2 id="tpl-jobs-title">Завдання цього шаблону</h2>
+      <div id="tpl-jobs" data-test="tpl-jobs"></div>
+    </section>
+  </section>
+
+  <section id="screen-missing" class="screen" data-test="screen-missing" hidden>
+    <h1>Не знайдено</h1>
+    <p id="missing-text"></p>
+    <p><a href="#/">До списку шаблонів</a></p>
+  </section>
+</main>
+<script src="/app.js"></script>
 </body>
 </html>
