@@ -181,6 +181,17 @@ class Api:
                            problems=problems)
         return m
 
+    def _need_valid(self, d: Path, m: dict, what: str) -> dict:
+        """style.json / texts.json as it is ON DISK (Claude's jobs write them without our validators):
+        409 with the problems unless it exists and passes the same validator the PUT routes use."""
+        data, err = _opt(d / f"{what}.json")
+        if data is None:
+            raise ApiError(409, err or f"{what}.json ще немає")
+        problems = schema.validate_style(data, m) if what == "style" else texts_mod.validate_texts(data, m)
+        if problems:
+            raise ApiError(409, f"{what}.json недійсний: " + "; ".join(problems), problems=problems)
+        return data
+
     def _mutate(self, d: Path, fn):
         """Locked read-modify-write of state.json; `fn(state)` returns the new state or None (no change)."""
         with STATE_LOCK:
@@ -368,7 +379,9 @@ class Api:
             "name": t, "skeleton": skeleton, "state": state, "brief": (brief or {}).get("brief"),
             "style": style, "texts": texts, "length_warnings": warnings,
             "font_checklist": texts_mod.font_checklist(m, style) if m and style else [],
-            "problems": [p for p in (style_err, texts_err) if p] + map_problems,
+            "problems": [p for p in (style_err, texts_err) if p] + map_problems
+                        + (["style.json: " + x for x in schema.validate_style(style, m)] if style is not None and m else [])
+                        + (["texts.json: " + x for x in texts_mod.validate_texts(texts, m)] if texts is not None and m else []),
             "map": m, "assets": self._assets_payload(t, d, state, m, style, data),
             "generation": {"pending": tickets.with_queue_state(self.queue, data["pending"]), "recent": data["recent"]},
             "jobs": [dict(_result_info(self.cfg, j), created_utc=j.get("created_utc")) for j in mine],
@@ -380,6 +393,7 @@ class Api:
         if not m:
             return []
         queued = {x["job_id"]: x for x in tickets.with_queue_state(self.queue, data["pending"])}
+        prompts = (style or {}).get("image_prompts")
         out = []
         for asset, spec in m["assets"].items():
             versions = [{"n": n, "file": f, "url": f"/files/templates/{t}/assets/{f}"}
@@ -388,7 +402,7 @@ class Api:
             out.append({
                 "asset": asset, "kind": spec.get("kind"), "frame": spec.get("frame"), "role": spec.get("role"),
                 "transparent": spec.get("transparent"),
-                "prompt": ((style or {}).get("image_prompts") or {}).get(asset),
+                "prompt": prompts.get(asset) if isinstance(prompts, dict) else None,
                 "chosen": (state.get("chosen") or {}).get(asset), "versions": versions,
                 "generation": {"pending": [x for x in queued.values() if x.get("asset") == asset], "last": last},
             })
@@ -440,8 +454,7 @@ class Api:
         self._refresh(t)
         state = read_json(d / "state.json")
         self._require_startable(state, "texts")
-        if not (d / "style.json").is_file():
-            raise ApiError(409, "стилю ще немає")
+        self._need_valid(d, self._need_map(state["skeleton"]), "style")
         if any(j.get("template") == t and j.get("type") == "write_texts" and j.get("state") in _ACTIVE for j in list_jobs(self.cfg)):
             raise ApiError(409, "завдання write_texts уже в черзі")
         brief, _ = _opt(d / "brief.json")
@@ -461,10 +474,9 @@ class Api:
             raise ApiError(409, "Canva уже зайнята іншим завданням: дочекайтесь його результату")
         inputs = dict(self._paths(t, state["skeleton"]), chosen=state.get("chosen") or {})
         if jtype == "apply_canva":
-            texts, err = _opt(d / "texts.json")
-            if texts is None:
-                raise ApiError(409, err or "текстів ще немає")
-            inputs["texts"] = texts  # the exact strings travel inside the job
+            m = self._need_map(state["skeleton"])
+            self._need_valid(d, m, "style")
+            inputs["texts"] = self._need_valid(d, m, "texts")  # the exact strings travel inside the job
         return self._request(t, d, state, jtype, inputs, copy_id)
 
     @route("POST", r"/api/templates/(?P<t>[^/]+)/apply")
@@ -498,6 +510,8 @@ class Api:
         state = read_json(d / "state.json")
         self._check_approvable(state, step)
         chosen_before = dict(state.get("chosen") or {})
+        if step in ("style", "texts"):
+            self._need_valid(d, self._need_map(state["skeleton"]), step)
         if step == "images":
             if data["pending"]:
                 raise ApiError(409, "генерація ще триває")
@@ -536,9 +550,7 @@ class Api:
         state = read_json(d / "state.json")
         self._require_startable(state, "images")
         m = self._need_map(state["skeleton"])
-        style, err = _opt(d / "style.json")
-        if style is None:
-            raise ApiError(409, err or "стилю ще немає")
+        style = self._need_valid(d, m, "style")
         names, override = body.get("assets"), body.get("prompt_override")
         if names is not None and not (isinstance(names, list) and names and all(isinstance(a, str) for a in names)):
             raise ApiError(400, "'assets' має бути непорожнім списком імен")

@@ -420,7 +420,9 @@ class TemplateTests(ApiBase):
         self.assertEqual(st, 200, body)
         self.assertEqual(self.pending("verify")[0]["target_design_id"], "DACOPY1")
         self.assertEqual(self.read_state()["steps"]["verify"]["status"], "waiting_claude")
-        self.assertEqual(self.post("/api/templates/t1/verify")[0], 409)  # Canva busy
+        st, body = self.post("/api/templates/t1/verify")
+        self.assertEqual(st, 409)  # Canva busy
+        self.assertIn("зайнята", body["error"])
 
     def test_apply_targets_recorded_copy_and_respects_busy(self):
         self.apply_ready()
@@ -435,6 +437,7 @@ class TemplateTests(ApiBase):
             json.dumps({"id": "20260101T000000Z-verify", "type": "verify"}), encoding="utf-8")
         st, body = self.post("/api/templates/t1/apply")
         self.assertEqual(st, 409)
+        self.assertIn("зайнята", body["error"])  # the API's own check, not only the guard's refusal
         self.assertEqual(self.pending("apply_canva"), [])
 
     def test_apply_without_design_id_in_map_is_409_not_500(self):
@@ -517,6 +520,7 @@ class StepFlowTests(ApiBase):
         self.make_template()  # style is waiting_claude
         self.assertEqual(self.post("/api/templates/t1/approve", {"step": "style"})[0], 409)
         self.set_state(statuses={"style": "review"})
+        self.write_style()
         self.assertEqual(self.post("/api/templates/t1/approve", {"step": "style"})[0], 200)
         self.assertEqual(self.read_state()["steps"]["style"]["status"], "approved")
 
@@ -542,6 +546,53 @@ class StepFlowTests(ApiBase):
         steps = {k: v["status"] for k, v in self.read_state()["steps"].items()}
         self.assertEqual((steps["texts"], steps["apply"]), ("review", "stale"))
         self.assertEqual(steps["images"], "approved")
+
+
+class OnDiskValidationTests(ApiBase):
+    """style.json / texts.json written by a Claude job skip the PUT validators: the API must not 500 on them."""
+
+    def setUp(self):
+        super().setUp()
+        self.make_skeleton(map_=photo_map())
+        self.make_template()
+        self.set_state(statuses={"style": "approved", "images": "approved", "texts": "review"})
+
+    def test_wrongly_shaped_style_is_listed_not_500(self):
+        (self.tdir() / "style.json").write_text(json.dumps({"image_prompts": "x"}), encoding="utf-8")
+        st, t = self.get("/api/templates/t1")
+        self.assertEqual(st, 200)
+        self.assertTrue(any(p.startswith("style.json:") for p in t["problems"]))
+        with mock.patch("app.comfy.ping", return_value=True):
+            self.set_state(statuses={"images": "draft"})
+            st, body = self.post("/api/templates/t1/images/generate")
+        self.assertEqual(st, 409)
+        self.assertTrue(body["problems"])
+        self.assertEqual(self.post("/api/templates/t1/texts/request")[0], 409)
+        self.assertFalse((self.tdir() / "gen_tickets.json").exists())
+
+    def test_approve_needs_a_valid_file_on_disk(self):
+        self.set_state(statuses={"style": "review", "images": "draft", "texts": "draft"})
+        self.assertEqual(self.post("/api/templates/t1/approve", {"step": "style"})[0], 409)  # no style.json
+        (self.tdir() / "style.json").write_text(json.dumps({"palette": {"a": "red"}}), encoding="utf-8")
+        st, body = self.post("/api/templates/t1/approve", {"step": "style"})
+        self.assertEqual(st, 409)
+        self.assertTrue(body["problems"])
+        self.assertEqual(self.read_state()["steps"]["style"]["status"], "review")
+        self.write_style()
+        self.assertEqual(self.post("/api/templates/t1/approve", {"step": "style"})[0], 200)
+        self.set_state(statuses={"images": "approved", "texts": "review"})
+        self.assertEqual(self.post("/api/templates/t1/approve", {"step": "texts"})[0], 409)  # no texts.json
+        (self.tdir() / "texts.json").write_text(json.dumps({"p1/image/hero": "x"}), encoding="utf-8")
+        self.assertEqual(self.post("/api/templates/t1/approve", {"step": "texts"})[0], 409)  # not a text slot
+
+    def test_apply_refuses_invalid_texts_on_disk(self):
+        self.write_style()
+        self.set_state(statuses={"texts": "approved"})
+        (self.tdir() / "texts.json").write_text(json.dumps({"p1/text/names": 7}), encoding="utf-8")
+        st, body = self.post("/api/templates/t1/apply")
+        self.assertEqual(st, 409)
+        self.assertTrue(body["problems"])
+        self.assertEqual(self.pending("apply_canva"), [])
 
 
 class ImageTests(ApiBase):
