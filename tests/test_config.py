@@ -27,6 +27,18 @@ class ConfigTests(unittest.TestCase):
                 load_config(p)
         self.assertIn("comfy_url", str(ctx.exception))
 
+    def test_load_config_rejects_string_forbidden_ids(self):
+        for bad in ("DAHarqlqips", [""], [1], None):
+            with self.subTest(bad=bad):
+                data = json.loads(FIXTURE.read_text(encoding="utf-8"))
+                data["forbidden_design_ids"] = bad
+                with tempfile.TemporaryDirectory() as d:
+                    p = Path(d) / "config.json"
+                    p.write_text(json.dumps(data), encoding="utf-8")
+                    with self.assertRaises(ValueError) as ctx:
+                        load_config(p)
+                self.assertIn("forbidden_design_ids", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

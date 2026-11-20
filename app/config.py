@@ -25,9 +25,12 @@ def load_config(path: Path) -> Config:
     for key in _REQUIRED:
         if key not in data:
             raise ValueError(f"config missing key: {key}")
+    ids = data["forbidden_design_ids"]
+    if not isinstance(ids, list) or not all(isinstance(i, str) and i for i in ids):
+        raise ValueError("config key forbidden_design_ids must be a list of non-empty strings")
     return Config(
         **{k: Path(data[k]) for k in _PATH_KEYS},
         comfy_url=str(data["comfy_url"]),
         studio_port=int(data["studio_port"]),
-        forbidden_design_ids=frozenset(data["forbidden_design_ids"]),
+        forbidden_design_ids=frozenset(ids),
     )
