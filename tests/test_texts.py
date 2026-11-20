@@ -61,20 +61,39 @@ class TextTests(unittest.TestCase):
         self.assertEqual(length_warnings({"p1/text/names": "x" * 15 + "\n" + "y" * 15}, self.m), {})
 
     def test_paragraph_115_percent(self):
-        orig = self.m["slots"][-1]["original"]
-        limit = int(len(orig) * 1.15)
+        orig = self.m["slots"][-2]["original"]
+        limit = (115 * len(orig)) // 100
         self.assertEqual(length_warnings({"p1/text/intro": "z" * limit}, self.m), {})
-        w = length_warnings({"p1/text/intro": "z" * (limit + 2)}, self.m)
+        w = length_warnings({"p1/text/intro": "z" * (limit + 1)}, self.m)
         self.assertEqual(list(w), ["p1/text/intro"])
         self.assertIn(str(len(orig)), w["p1/text/intro"])
-        self.assertIn(str(limit + 2), w["p1/text/intro"])
+        self.assertIn(str(limit + 1), w["p1/text/intro"])
+
+    def test_paragraph_exact_integer_limit(self):
+        for s in self.m["slots"]:
+            if s["locator"] == "p1/text/intro":
+                s["original"] = "o" * 100
+        self.assertEqual(length_warnings({"p1/text/intro": "z" * 115}, self.m), {})
+        w = length_warnings({"p1/text/intro": "z" * 116}, self.m)
+        self.assertEqual(list(w), ["p1/text/intro"])
+        self.assertIn("115", w["p1/text/intro"])
+        self.assertNotIn("114", w["p1/text/intro"])
+
+    def test_table_cell_is_a_text(self):
+        self.assertEqual(validate_texts({"p1/cell/day": "12"}, self.m), [])
+        w = length_warnings({"p1/cell/day": "123"}, self.m)
+        self.assertEqual(list(w), ["p1/cell/day"])
+        self.assertEqual(length_warnings({"p1/cell/day": "12"}, self.m), {})
+        self.assertIn("p1/cell/day", [e["locator"] for e in font_checklist(self.m, self.s)])
+        for loc in ("p1/image/hero", "p1/colour/background"):
+            self.assertTrue(validate_texts({loc: "x"}, self.m))
 
     def test_length_ignores_unknown_and_nonstr(self):
         self.assertEqual(length_warnings({"zzz": "x" * 99, "p1/text/names": 5}, self.m), {})
 
     def test_font_checklist_lists_every_text_role(self):
         r = font_checklist(self.m, self.s)
-        self.assertEqual([e["locator"] for e in r], ["p1/text/names", "p1/text/intro"])
+        self.assertEqual([e["locator"] for e in r], ["p1/text/names", "p1/text/intro", "p1/cell/day"])
         self.assertEqual(r[0], {"locator": "p1/text/names", "role": "heading", "font": "Cormorant Garamond"})
         self.assertEqual(r[1]["font"], "Lato")
 

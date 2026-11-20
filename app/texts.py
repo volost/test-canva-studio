@@ -1,14 +1,14 @@
 """Texts: validation against the map's text slots, length warnings, and the manual font checklist.
 Strings are never altered here (no strip, no normalisation, no escaping)."""
 NOT_SET = "не задано"
-PARAGRAPH_FACTOR = 1.15
+PARAGRAPH_PERCENT = 115
 
 
 def _text_slots(m) -> list:
     slots = m.get("slots") if isinstance(m, dict) else None
     if not isinstance(slots, list):
         return []
-    return [s for s in slots if isinstance(s, dict) and s.get("type") == "text"
+    return [s for s in slots if isinstance(s, dict) and s.get("type") in ("text", "table_cell")
             and isinstance(s.get("locator"), str)]
 
 
@@ -37,9 +37,9 @@ def length_warnings(texts, m) -> dict:
         mx, orig = s.get("max_len"), s.get("original")
         if isinstance(mx, int) and not isinstance(mx, bool) and "\n" not in v and len(v) > mx:
             out[loc] = f"Задовгий рядок: {len(v)} символів, дозволено до {mx}."
-        elif isinstance(orig, str) and orig and len(v) > PARAGRAPH_FACTOR * len(orig):
+        elif isinstance(orig, str) and orig and len(v) * 100 > PARAGRAPH_PERCENT * len(orig):
             out[loc] = (f"Абзац задовгий: {len(v)} символів, в оригіналі {len(orig)} "
-                        f"(дозволено до 115 %, тобто {int(PARAGRAPH_FACTOR * len(orig))}).")
+                        f"(дозволено до 115 %, тобто {(PARAGRAPH_PERCENT * len(orig)) // 100}).")
     return out
 
 

@@ -16,7 +16,8 @@
     {"locator": "p1/image/seal", "type": "image", "role": "seal", "asset": "seal", "personal": false, "column_px": null, "max_len": null, "original": null},
     {"locator": "p1/colour/background", "type": "colour", "role": "background", "asset": null, "personal": false, "column_px": null, "max_len": null, "original": null},
     {"locator": "p1/text/names", "type": "text", "role": "heading", "asset": null, "personal": true, "column_px": 600, "max_len": 20, "original": null},
-    {"locator": "p1/text/intro", "type": "text", "role": "body", "asset": null, "personal": false, "column_px": 600, "max_len": null, "original": "Together with their families, they invite you to celebrate their wedding day."}
+    {"locator": "p1/text/intro", "type": "text", "role": "body", "asset": null, "personal": false, "column_px": 600, "max_len": null, "original": "Together with their families, they invite you to celebrate their wedding day."},
+    {"locator": "p1/cell/day", "type": "table_cell", "role": "calendar", "asset": null, "personal": true, "column_px": 80, "max_len": 2, "original": null}
   ],
   "envelope": {
     "section_px": [1000, 700],

@@ -59,7 +59,7 @@ class MapTests(unittest.TestCase):
         self.assertTrue(has(validate_map(self.m), "frame"))
 
     def test_text_and_colour_slot_with_asset_rejected(self):
-        self.m["slots"][-1]["asset"] = "hero"
+        self.m["slots"][-2]["asset"] = "hero"
         self.assertTrue(validate_map(self.m))
 
     def test_protected_must_be_strings(self):
@@ -100,6 +100,18 @@ class MapTests(unittest.TestCase):
         del by["p1/image/hero"]["layer"]
         by["p1/text/names"]["layer"] = "cover"  # not an image slot
         self.assertTrue(has(validate_map(self.m), "layer"))
+
+    def test_unhashable_values_return_messages(self):
+        self.m["slots"][0]["asset"] = ["hero"]
+        self.assertTrue(has(validate_map(self.m), "asset"))
+        self.m = load("map_min.json")
+        by = {s["locator"]: s for s in self.m["slots"]}
+        by["p1/image/env-cover"]["asset"] = {"a": 1}
+        by["p1/image/env-cover"]["layer"] = "cover"
+        self.assertTrue(validate_map(self.m))
+        self.m = load("map_min.json")
+        self.m["envelope"]["seal_asset"] = ["seal"]
+        self.assertTrue(has(validate_map(self.m), "seal_asset"))
 
     def test_non_dict_inputs(self):
         for bad in (None, [], "x", 3):
@@ -155,6 +167,15 @@ class StyleTests(unittest.TestCase):
         self.s = load("style_min.json")
         self.s["font_map"]["body"] = "display"
         self.assertTrue(has(validate_style(self.s, self.m), "display"))
+
+    def test_unhashable_values_return_messages(self):
+        self.s["colour_roles"]["background"] = ["background"]
+        self.assertTrue(has(validate_style(self.s, self.m), "background"))
+        self.s = load("style_min.json")
+        for s in self.m["slots"]:
+            if s["type"] == "colour":
+                s["role"] = ["background"]
+        self.assertTrue(has(validate_style(self.s, self.m), "colour"))
 
     def test_non_dict(self):
         self.assertTrue(validate_style(None, self.m))

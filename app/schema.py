@@ -76,7 +76,7 @@ def validate_map(d) -> list:
             out.append(f"{tag}: bad type {t!r}")
         asset = s.get("asset")
         if t == "image":
-            if asset not in assets or not isinstance(asset, str):
+            if not isinstance(asset, str) or asset not in assets:
                 out.append(f"{tag}: image slot references unknown asset {asset!r}")
         elif t in ("text", "colour") and asset is not None:
             out.append(f"{tag}: {t} slot must have asset null")
@@ -84,7 +84,8 @@ def validate_map(d) -> list:
             layer = s["layer"]
             if layer not in LAYERS:
                 out.append(f"{tag}: bad layer {layer!r}")
-            elif t != "image" or not (isinstance(assets.get(asset), dict) and assets[asset].get("kind") == "composed"):
+            elif t != "image" or not (isinstance(asset, str) and isinstance(assets.get(asset), dict)
+                                         and assets[asset].get("kind") == "composed"):
                 out.append(f"{tag}: layer allowed only on an image slot with a composed asset")
 
     if "protected" in d:
@@ -138,11 +139,12 @@ def validate_style(d, m) -> list:
         out.append("colour_roles: not an object")
         roles = {}
     for r, pr in roles.items():
-        if pr not in pal:
+        if not isinstance(pr, str) or pr not in pal:
             out.append(f"colour_roles {r!r}: {pr!r} is not a palette role")
     slots = m.get("slots") if isinstance(m.get("slots"), list) else []
     for s in slots:
-        if isinstance(s, dict) and s.get("type") == "colour" and s.get("role") not in roles:
+        if (isinstance(s, dict) and s.get("type") == "colour"
+                and (not isinstance(s.get("role"), str) or s.get("role") not in roles)):
             out.append(f"colour_roles: no entry for colour slot role {s.get('role')!r}")
     fonts = d.get("fonts")
     if not isinstance(fonts, dict):
