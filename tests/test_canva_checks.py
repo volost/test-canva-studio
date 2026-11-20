@@ -140,7 +140,7 @@ class FinalCheckTests(unittest.TestCase):
         res = final_check(self.orig, self.sage, self.m, self.tx, style=self.st)
         failed = [r for r in res if not r["passed"]]
         self.assertEqual(failed, [], failed)
-        self.assertEqual({"texts", "formatting", "colours", "protected", "structure", "leftovers", "control"},
+        self.assertEqual({"texts", "formatting", "colours", "protected", "structure", "leftovers", "coverage", "control"},
                          {r["name"] for r in res})
 
     def test_without_style_colours_are_not_claimed(self):
@@ -212,6 +212,52 @@ class FinalCheckTests(unittest.TestCase):
         self.assertFalse(res["images"]["passed"])
         self.assertIn("p1/image/hero", res["images"]["detail"])
 
+    def test_incomplete_map_fails_coverage_even_when_everything_else_is_green(self):
+        # reviewer's scenario: drop a unique personal slot and put the skeleton's wording back into that element
+        m = copy.deepcopy(self.m)
+        victim = next(s for s in m["slots"] if s["type"] == "text" and s["personal"] and s["original"] == "Villa Erba")
+        m["slots"].remove(victim)
+        now = copy.deepcopy(self.sage)
+        now[victim["locator"]] = copy.deepcopy(self.orig[victim["locator"]])
+        res = by_name(final_check(self.orig, now, m, self.tx, style=self.st))
+        self.assertFalse(res["coverage"]["passed"])
+        self.assertIn(victim["locator"], res["coverage"]["detail"])
+        self.assertFalse(res["leftovers"]["passed"] and res["texts"]["passed"] and res["colours"]["passed"]
+                         and res["formatting"]["passed"] and res["structure"]["passed"] and res["protected"]["passed"]
+                         and res["coverage"]["passed"])
+        # the same map with the element listed in `keep` is complete again (and then its wording may stay)
+        m["keep"] = [victim["locator"]]
+        res = by_name(final_check(self.orig, self.sage, m, self.tx, style=self.st))
+        self.assertTrue(res["coverage"]["passed"], res["coverage"])
+
+    def test_map_sage_is_complete_with_an_empty_keep(self):
+        self.assertEqual(self.m["keep"], [])
+        res = by_name(final_check(self.orig, self.sage, self.m, self.tx, style=self.st))
+        self.assertTrue(res["coverage"]["passed"], res["coverage"])
+        self.assertIn("117", res["coverage"]["detail"])
+
+    def test_coverage_accepts_protected_and_keep_and_flags_unknown_keep(self):
+        m, facts = H.mini_map(), H.mini_facts()
+        facts["p1/text/extra"] = H.text_rec("x")
+        res = by_name(final_check(facts, facts, m, H.mini_texts(), control=False))
+        self.assertFalse(res["coverage"]["passed"])
+        m["keep"] = ["p1/text/extra"]
+        res = by_name(final_check(facts, facts, m, H.mini_texts(), control=False))
+        self.assertTrue(res["coverage"]["passed"], res["coverage"])          # footer is protected, extra is kept
+        m["keep"].append("p1/text/ghost")
+        res = by_name(final_check(facts, facts, m, H.mini_texts(), control=False))
+        self.assertFalse(res["coverage"]["passed"])
+        self.assertIn("ghost", res["coverage"]["detail"])
+
+    def test_colours_detail_lists_the_roles_kept_as_in_the_skeleton(self):
+        st = copy.deepcopy(self.st)
+        del st["colour_roles"]["script"]
+        res = by_name(final_check(self.orig, self.sage, self.m, self.tx, style=st))
+        self.assertIn("kept as in the skeleton", res["colours"]["detail"])
+        self.assertIn("script (", res["colours"]["detail"])
+        full = by_name(final_check(self.orig, self.sage, self.m, self.tx, style=self.st))["colours"]["detail"]
+        self.assertIn("heading_on_photo (", full)
+
     def test_images_frame_must_equal_the_original(self):
         m, facts = H.mini_map(), H.mini_facts()
         for a in ("hero", "envelope", "florals"):
@@ -230,10 +276,11 @@ class FinalCheckTests(unittest.TestCase):
         from unittest import mock
         import canva.final_check as fc
         res = by_name(final_check(self.orig, self.sage, self.m, self.tx, style=self.st, images=True))
-        self.assertIn("8/8 synthetic probes behave", res["control"]["detail"])
+        self.assertIn("9/9 synthetic probes behave", res["control"]["detail"])
         self.assertTrue(res["control"]["passed"])
         blind = {"name": "x", "passed": True, "detail": ""}
-        for fn in ("_check_formatting", "_check_structure", "_check_colours", "_check_leftovers", "_check_images"):
+        for fn in ("_check_formatting", "_check_structure", "_check_colours", "_check_leftovers", "_check_images",
+                   "_check_coverage"):
             with mock.patch.object(fc, fn, return_value=blind):
                 res = by_name(final_check(self.orig, self.sage, self.m, self.tx, style=self.st, images=True))
             self.assertFalse(res["control"]["passed"], fn)

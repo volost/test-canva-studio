@@ -113,6 +113,30 @@ class MapTests(unittest.TestCase):
         self.m["envelope"]["seal_asset"] = ["seal"]
         self.assertTrue(has(validate_map(self.m), "seal_asset"))
 
+    def test_slot_target_validated(self):
+        by = {s["locator"]: s for s in self.m["slots"]}
+        by["p1/colour/background"]["target"] = "stroke"
+        self.assertEqual(validate_map(self.m), [])
+        by["p1/colour/background"]["target"] = "fill"
+        self.assertEqual(validate_map(self.m), [])
+        by["p1/colour/background"]["target"] = "strok"          # a typo must fail at map time
+        self.assertTrue(has(validate_map(self.m), "strok"))
+        by["p1/colour/background"]["target"] = ["stroke"]
+        self.assertTrue(has(validate_map(self.m), "target"))
+        by["p1/colour/background"]["target"] = "fill"
+        by["p1/text/names"]["target"] = "fill"                  # not a colour slot
+        self.assertTrue(has(validate_map(self.m), "colour slot"))
+
+    def test_keep_is_an_optional_list_of_strings(self):
+        self.assertEqual(validate_map(self.m), [])               # absent: fine
+        self.m["keep"] = ["p1/text/footer"]
+        self.assertEqual(validate_map(self.m), [])
+        self.m["keep"] = []
+        self.assertEqual(validate_map(self.m), [])
+        for bad in ("p1/text/footer", [1], None, {"a": 1}, [["x"]]):
+            self.m["keep"] = bad
+            self.assertTrue(has(validate_map(self.m), "keep"), bad)
+
     def test_non_dict_inputs(self):
         for bad in (None, [], "x", 3):
             r = validate_map(bad)

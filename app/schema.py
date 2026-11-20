@@ -6,6 +6,7 @@ TOP_KEYS = ("skeleton", "design_id", "pages", "assets", "slots", "envelope", "pr
 SLOT_TYPES = ("image", "text", "colour", "table_cell")
 ASSET_KINDS = ("photo", "texture", "watercolour", "solid", "composed")
 LAYERS = ("cover", "flap", "body")
+TARGETS = ("fill", "stroke")
 ENVELOPE_PAIRS = ("section_px", "tip", "left_top", "right_top", "seal_centre", "seal_size")
 FONT_ROLES = ("heading", "body", "script")
 _HEX = re.compile(r"#[0-9a-fA-F]{6}")
@@ -87,6 +88,18 @@ def validate_map(d) -> list:
             elif t != "image" or not (isinstance(asset, str) and isinstance(assets.get(asset), dict)
                                          and assets[asset].get("kind") == "composed"):
                 out.append(f"{tag}: layer allowed only on an image slot with a composed asset")
+
+        if "target" in s:
+            target = s["target"]
+            if target not in TARGETS:
+                out.append(f"{tag}: bad target {target!r} (fill or stroke)")
+            elif t != "colour":
+                out.append(f"{tag}: target allowed only on a colour slot")
+
+    if "keep" in d:
+        k = d["keep"]
+        if not (isinstance(k, list) and all(isinstance(x, str) for x in k)):
+            out.append("keep: must be a list of strings (locators of texts intentionally left as they are)")
 
     if "protected" in d:
         p = d["protected"]

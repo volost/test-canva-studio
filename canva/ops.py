@@ -4,10 +4,12 @@ Pure functions over JSON: no network, no Canva calls. The session sends the batc
 
 Usage (python -I canva/ops.py ...):
   build  <map.json> <style.json> <texts.json> <facts.json> <out_dir>
-      text, text colour, calendar cells and colours -> out_dir/ops_<page id>.json
-      ({"page_index", "operations"}) + out_dir/ops_notes.txt (everything skipped, and why).
+      text, text colour, calendar cells and colours -> out_dir/ops_<page id>_<nn>.json, one file per edit-design
+      call ({"page_index", "operations"}, at most 60 operations each, an element's operations never split) +
+      out_dir/ops_notes.txt (everything skipped or kept as is, and why).
   images <map.json> <uploads.json> <facts.json> <out_dir>
-      update_fill + exact-cover crop_media for every image slot with an upload -> out_dir/images_<page id>.json
+      update_fill + exact-cover crop_media for every image slot with an upload -> out_dir/images_<page id>_<nn>.json
+      (chunked like build; a fill and its crop are always in the same call)
       uploads.json = {asset or "asset:layer": {"media_id", "pixel_size": [w, h], "alt_text"}}.
   verify <facts_before.json> <facts_after.json> <batch.json> <report.txt>
       first runs its own control (an untargeted change and a wrong expected value must be caught on this very
@@ -32,10 +34,13 @@ if _ROOT not in sys.path:  # under `python -I` the script's folder is not on sys
 from canva.facts import flat  # noqa: E402
 from canva.geometry import cover_box  # noqa: E402
 from canva.maputil import page_ids, page_index, page_of_locator  # noqa: E402
+from canva.protected import protected_members  # noqa: E402
 
 _HEX = re.compile(r"#[0-9a-fA-F]{6}")
 TOL_BOX = 0.05       # px: allowed deviation of an image box from the exact cover box
 TOL_POS = 0.02       # px: position / size after position_element / resize_element
+MAX_OPS = 60         # operations per edit-design call (the largest batch run against the connector was 65)
+MAX_FILLS = 26       # update_fill operations per call (ground truth: at most 26 images per batch)
 _FMT_FIELD = {"color": "color", "font_size": "fontSize", "text_align": "align", "font_style": "style",
               "font_weight": "weight", "line_height": "lh", "decoration": "decoration", "link": "link"}
 
@@ -98,6 +103,24 @@ def _rec(facts, loc, kinds, what):
     return rec
 
 
+def uncovered_texts(records: dict, m: dict) -> list:
+    """Locators of text and table-cell records that the map does not account for: neither a slot, nor protected
+    (or below a protected locator), nor listed in the optional map key `keep` (texts intentionally left as they are)."""
+    covered = ({s["locator"] for s in m.get("slots") or []} | set(m.get("keep") or [])
+               | set(protected_members(records, m, with_slots=True)))
+    return sorted(k for k, v in records.items() if v.get("type") in ("text", "cell") and k not in covered)
+
+
+def kept_colour_roles(m: dict, style: dict) -> dict:
+    """{text role: number of (unprotected) text / cell slots} whose role has no colour in style colour_roles:
+    their text keeps the skeleton's colour."""
+    prot, out = set(m.get("protected") or []), {}
+    for s in m.get("slots") or []:
+        if s["type"] in ("text", "table_cell") and s["locator"] not in prot and palette_colour(style, s.get("role")) is None:
+            out[s.get("role")] = out.get(s.get("role"), 0) + 1
+    return out
+
+
 def build_ops(m: dict, style: dict, texts: dict, facts: dict, notes: list = None) -> dict:
     """Operations per page id: replace_text / format_text (colour) for text and calendar-cell slots, and
     recolor_element / update_stroke_properties for colour slots. Only what differs from `facts` is emitted, so a
@@ -127,6 +150,10 @@ def build_ops(m: dict, style: dict, texts: dict, facts: dict, notes: list = None
             _colour_slot(s, style, facts, emit, notes)
         else:
             _text_slot(s, style, texts, facts, emit, notes)
+    for role, n in sorted(kept_colour_roles(m, style).items(), key=lambda kv: str(kv[0])):
+        notes.append(f"text role {role!r}: {n} slot(s) keep the skeleton's colour - no entry in style colour_roles")
+    for loc in uncovered_texts(facts, m):
+        notes.append(f"{loc}: text element is not in the map (no slot, not protected, not in keep) - left untouched")
     for page_ops in out.values():
         for op in page_ops:
             assert op["locator_id"] not in protected, f"protected locator reached the batch: {op}"
@@ -224,9 +251,63 @@ def build_image_ops(m: dict, uploads: dict, facts: dict, notes: list = None) -> 
     return {pid: fills[pid] + crops[pid] for pid in fills}
 
 
-def to_calls(m: dict, batches: dict) -> dict:
-    """{page id: {"page_index", "operations"}} - the shape of one edit-design call per page."""
-    return {pid: {"page_index": page_index(m, pid), "operations": ops} for pid, ops in batches.items()}
+def _section_guess(loc):
+    parts = loc.split("-")
+    return parts[1] if len(parts) >= 2 else ""
+
+
+def chunk_ops(ops: list, section_of=None, limit: int = MAX_OPS, max_fills: int = MAX_FILLS) -> list:
+    """Split one page's operations into calls of at most `limit` operations (and `max_fills` update_fill).
+    All operations of one element stay together and in order (so an update_fill is never parted from its
+    crop_media, nor a replace_text from its format_text); elements of one section stay together where the section
+    fits in a call; a larger section is cut between elements. `section_of(locator)` names the section."""
+    section_of = section_of or _section_guess
+    units, order = {}, []
+    for i, op in enumerate(ops):
+        key = op.get("locator_id") or f"#{i}"
+        if key not in units:
+            units[key] = []
+            order.append(key)
+        units[key].append(op)
+    groups, gorder = {}, []
+    for key in order:
+        sec = None if key.startswith("#") else section_of(key)
+        if sec not in groups:
+            groups[sec] = []
+            gorder.append(sec)
+        groups[sec].append(units[key])
+    calls, cur, fills = [], [], 0
+
+    def n_fills(u):
+        return sum(1 for o in u if o["type"] == "update_fill")
+
+    def flush():
+        nonlocal cur, fills
+        if cur:
+            calls.append(cur)
+        cur, fills = [], 0
+
+    for sec in gorder:
+        total, tf = sum(len(u) for u in groups[sec]), sum(n_fills(u) for u in groups[sec])
+        if cur and total <= limit and tf <= max_fills and (len(cur) + total > limit or fills + tf > max_fills):
+            flush()
+        for u in groups[sec]:
+            if len(u) > limit:
+                raise ValueError(f"one element has {len(u)} operations, more than the limit {limit}")
+            if cur and (len(cur) + len(u) > limit or fills + n_fills(u) > max_fills):
+                flush()
+            cur += u
+            fills += n_fills(u)
+    flush()
+    return calls
+
+
+def to_calls(m: dict, batches: dict, facts: dict = None, limit: int = MAX_OPS) -> dict:
+    """{page id: [{"page_index", "operations"}, ...]} - the edit-design calls for each page, in order, each with at
+    most `limit` operations (see chunk_ops). `facts` gives each element's section for grouping."""
+    sec = (lambda loc: facts[loc].get("section") if facts and loc in facts else _section_guess(loc))
+    return {pid: [{"page_index": page_index(m, pid), "operations": c} for c in chunk_ops(ops, sec, limit)]
+            for pid, ops in batches.items()}
 
 
 # ---------------------------------------------------------------- verification
@@ -349,7 +430,10 @@ def verify_batch(before: dict, after: dict, ops: list) -> list:
     beyond what its operations allow, and no other record may change, appear or vanish. [] = clean."""
     found, targets, allowed = [], set(), {}
     for op in ops:
-        if op["type"] in ("update_title", "replace_speaker_notes", "add_page"):
+        if op["type"] in ("add_page", "delete_page"):
+            found.append(f"{op['type']}: forbidden - the connector must not add or delete pages (DESIGN 3 and 5.2)")
+            continue
+        if op["type"] in ("update_title", "replace_speaker_notes"):
             continue                                  # not an element of the facts
         loc = op.get("locator_id")
         a, b = before.get(loc), after.get(loc)
@@ -422,17 +506,19 @@ def _load(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def _write_batches(prefix, m, batches, out_dir):
+def _write_batches(prefix, m, batches, out_dir, facts=None):
+    """One file per edit-design call: <out_dir>/<prefix>_<page id>_<nn>.json ({"page_index", "operations"})."""
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     paths = []
-    for pid, call in to_calls(m, batches).items():
-        p = Path(out_dir) / f"{prefix}_{pid}.json"
-        p.write_text(json.dumps(call, ensure_ascii=False, indent=1), encoding="utf-8")
-        kinds = {}
-        for o in call["operations"]:
-            kinds[o["type"]] = kinds.get(o["type"], 0) + 1
-        print(f"page {pid} (index {call['page_index']}): {len(call['operations'])} operations {kinds}\n  file: {p}")
-        paths.append(p)
+    for pid, calls in to_calls(m, batches, facts).items():
+        for n, call in enumerate(calls, 1):
+            p = Path(out_dir) / f"{prefix}_{pid}_{n:02d}.json"
+            p.write_text(json.dumps(call, ensure_ascii=False, indent=1), encoding="utf-8")
+            kinds = {}
+            for o in call["operations"]:
+                kinds[o["type"]] = kinds.get(o["type"], 0) + 1
+            print(f"page {pid} (index {call['page_index']}) call {n}/{len(calls)}: {len(call['operations'])} operations {kinds}\n  file: {p}")
+            paths.append(p)
     return paths
 
 
@@ -445,14 +531,14 @@ def main(argv) -> int:
         if cmd == "build" and len(a) == 5:
             m, notes = _load(a[0]), []
             batches = build_ops(m, _load(a[1]), _load(a[2]), _load(a[3]), notes=notes)
-            _write_batches("ops", m, batches, a[4])
+            _write_batches("ops", m, batches, a[4], _load(a[3]))
             nf = Path(a[4]) / "ops_notes.txt"
             nf.write_text("\n".join(notes) if notes else "no notes", encoding="utf-8")
             print(f"{sum(len(v) for v in batches.values())} operations in total; {len(notes)} notes\n  notes: {nf}")
         elif cmd == "images" and len(a) == 4:
             m, notes = _load(a[0]), []
             batches = build_image_ops(m, _load(a[1]), _load(a[2]), notes=notes)
-            _write_batches("images", m, batches, a[3])
+            _write_batches("images", m, batches, a[3], _load(a[2]))
             nf = Path(a[3]) / "images_notes.txt"
             nf.write_text("\n".join(notes) if notes else "no notes", encoding="utf-8")
             print(f"{len(notes)} notes\n  notes: {nf}")

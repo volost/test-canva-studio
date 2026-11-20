@@ -6,9 +6,12 @@ Usage: python -I canva/final_check.py <map.json> <texts.json> <facts_original.js
 Checks (each a {name, passed, detail}); a check that examined nothing fails, because it proves nothing:
   texts       every text / calendar-cell slot that has a texts entry now shows exactly that text
   formatting  ... in the font, size, weight, style, alignment, line height and spacing it had in the original
-  colours     (with --style) text colours follow style colour_roles, other text colours are unchanged, colour
-              slots show their palette colour
+  colours     (with --style) text colours follow style colour_roles, other text colours are unchanged (the roles
+              kept as they are are listed in the detail), colour slots show their palette colour
   protected   protected_changes() is empty
+  coverage    every text / calendar-cell record of the original is a slot, protected, or listed in the map's `keep`
+              (an unmapped text is never checked by the others: an incomplete map must not give a green result);
+              a `keep` locator that is not in the original is reported
   structure   no element added or removed; type, page, section, parent and layer order of every record unchanged
   leftovers   no personal slot's original wording (4+ characters) is still anywhere in the design's text
   images      (with --images) every image slot holds a new picture, its frame (box, rotation, opacity, lock, order)
@@ -29,7 +32,7 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 from canva.geometry import cover_box  # noqa: E402
-from canva.ops import _frame as frame_of, colour_state, OpsError, palette_colour  # noqa: E402
+from canva.ops import _frame as frame_of, colour_state, kept_colour_roles, OpsError, palette_colour, uncovered_texts  # noqa: E402
 from canva.protected import protected_changes, protected_members, run_control  # noqa: E402
 
 FONT_FIELDS = ("fontRef", "fontSize", "weight", "style", "align", "lh", "ls")
@@ -130,7 +133,20 @@ def _check_colours(orig, now, m, texts, style):
             continue
         if want is None or not got or any(_lc(c) != want for c in got):
             bad.append(f"{loc}: {target} colours {got}, want {want}")
-    return _verdict("colours", bad, n, "text and colour slots")
+    res = _verdict("colours", bad, n, "text and colour slots")
+    kept = kept_colour_roles(m, style)
+    if kept:
+        res["detail"] += "; roles kept as in the skeleton (no colour_roles entry): " + ", ".join(
+            f"{r} ({c})" for r, c in sorted(kept.items(), key=lambda kv: str(kv[0])))
+    return res
+
+
+def _check_coverage(orig, m):
+    miss = uncovered_texts(orig, m)
+    bad = [f"{k}: text element not in the map (no slot, not protected, not in keep)" for k in miss]
+    bad += [f"keep {k}: not in the original facts (stale map?)" for k in m.get("keep") or [] if k not in orig]
+    n = sum(1 for v in orig.values() if v.get("type") in ("text", "cell"))
+    return _verdict("coverage", bad, n, "text and cell records")
 
 
 def _check_structure(orig, now):
@@ -203,7 +219,7 @@ def _check_images(orig, now, m):
 
 
 def _sub(m, slot):
-    return {**m, "slots": [slot], "protected": []}
+    return {**m, "slots": [slot], "protected": [], "keep": []}
 
 
 def _probe(name, good, bad):
@@ -228,6 +244,12 @@ def _controls(orig, m, texts, style, images):
                           _check_formatting(orig, bad, _sub(m, ts[0]), {loc: orig[loc]["text"]})))
     ok, detail = run_control(orig, m)
     out.append(("protected", ok, "protected: " + detail))
+    cs0 = next((s for s in _text_slots(m, texts, only_with_text=False) if s["locator"] in orig), None)
+    if cs0 is not None:
+        o1 = {cs0["locator"]: cp(orig[cs0["locator"]])}
+        stray = cp(o1)
+        stray["COVERAGE-PROBE"] = cp(o1[cs0["locator"]])
+        out.append(_probe("coverage", _check_coverage(o1, _sub(m, cs0)), _check_coverage(stray, _sub(m, cs0))))
     if orig:
         gone, added = cp(orig), cp(orig)
         k0 = sorted(orig)[0]
@@ -292,6 +314,7 @@ def final_check(orig: dict, now: dict, m: dict, texts: dict, style: dict = None,
     pc = protected_changes(orig, now, m)
     res.append({"name": "protected", "passed": not pc, "detail": f"{len(protected_members(orig, m))} protected records, "
                 f"{len(pc)} violations" + ("" if not pc else ": " + "; ".join(pc[:3]))})
+    res.append(_check_coverage(orig, m))
     res.append(_check_structure(orig, now))
     res.append(_check_leftovers(orig, now, m, texts))
     if images:

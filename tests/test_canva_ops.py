@@ -9,7 +9,7 @@ from app.schema import validate_map, validate_style
 from canva import facts as F
 from canva import layout, outline, probe_diff
 from canva.geometry import cover_box
-from canva.ops import OpsError, build_image_ops, build_ops, to_calls, verify_batch, verify_control
+from canva.ops import OpsError, build_image_ops, build_ops, chunk_ops, to_calls, verify_batch, verify_control
 from tests import canva_helpers as H
 
 
@@ -185,8 +185,30 @@ class BuildOpsMiniTests(unittest.TestCase):
 
     def test_to_calls_has_page_index(self):
         calls = to_calls(self.m, build_ops(self.m, self.st, self.tx, self.facts))
-        self.assertEqual(calls["PGmini01"]["page_index"], 1)
-        self.assertTrue(calls["PGmini01"]["operations"])
+        self.assertEqual(len(calls["PGmini01"]), 1)
+        self.assertEqual(calls["PGmini01"][0]["page_index"], 1)
+        self.assertTrue(calls["PGmini01"][0]["operations"])
+
+    def test_text_role_without_colour_is_noted_with_its_slot_count(self):
+        del self.st["colour_roles"]["heading"]
+        notes = []
+        b = build_ops(self.m, self.st, self.tx, self.facts, notes=notes)
+        self.assertEqual([o for o in ops_of(b) if o["type"] == "format_text"], [])      # colour op gone ...
+        self.assertTrue(any("'heading'" in n and "1 slot" in n and "colour_roles" in n for n in notes), notes)  # ... and said
+        # 'body' (intro) and 'calendar' have no colour role in style_min either: one note per role, counted
+        self.assertTrue(any("'body'" in n and "1 slot" in n for n in notes), notes)
+        self.assertEqual(sum("keep the skeleton's colour" in n for n in notes), len({"heading", "body", "calendar"}))
+
+    def test_text_element_not_in_the_map_is_noted(self):
+        facts = copy.deepcopy(self.facts)
+        facts["p1/text/stranger"] = H.text_rec("Left behind")
+        notes = []
+        build_ops(self.m, self.st, self.tx, facts, notes=notes)
+        self.assertTrue(any("p1/text/stranger" in n and "not in the map" in n for n in notes), notes)
+        self.m["keep"] = ["p1/text/stranger"]
+        notes = []
+        build_ops(self.m, self.st, self.tx, facts, notes=notes)
+        self.assertFalse(any("p1/text/stranger" in n for n in notes), notes)
 
     def test_slots_under_a_protected_locator_are_still_written(self):
         # a protected locator covers itself; descendants the map lists as slots were listed on purpose (the envelope
@@ -232,6 +254,25 @@ class BuildOpsSageTests(unittest.TestCase):
         self.assertTrue({o["type"] for o in self.ops} <=
                         {"replace_text", "format_text", "recolor_element", "update_stroke_properties"})
         self.assertEqual(set(self.batches), {self.m["pages"][0]["id"], self.m["pages"][1]["id"]})
+
+    def test_script_role_without_colour_is_noted_on_the_real_map(self):
+        st = copy.deepcopy(self.st)
+        del st["colour_roles"]["script"]
+        notes = []
+        ops = ops_of(build_ops(self.m, st, self.tx, self.orig, notes=notes))
+        n_script = sum(1 for s in self.m["slots"] if s["type"] == "text" and s["role"] == "script")
+        self.assertGreater(n_script, 0)
+        self.assertEqual(len(self.ops) - len(ops), sum(1 for s in self.m["slots"] if s["type"] == "text" and s["role"] == "script"
+                                                      and {r["color"] for r in self.orig[s["locator"]]["regions"]} != {"#2f3a2c"}))
+        self.assertTrue(any("'script'" in n and f"{n_script} slot" in n for n in notes), notes)
+
+    def test_map_sage_notes_name_every_kept_role_and_no_stranger(self):
+        roles = {n.split("'")[1] for n in self.notes if "keep the skeleton's colour" in n}
+        want = {s["role"] for s in self.m["slots"] if s["type"] in ("text", "table_cell")
+                and s["role"] not in self.st["colour_roles"]}
+        self.assertEqual(roles, want)
+        self.assertIn("monogram_on_photo", roles)
+        self.assertFalse(any("not in the map" in n for n in self.notes), self.notes)
 
     def test_second_run_on_the_written_design_is_empty(self):
         self.assertEqual(build_ops(self.m, self.st, self.tx, self.sage), {})
@@ -316,6 +357,82 @@ class ImageOpsTests(unittest.TestCase):
                 self.assertGreaterEqual(o["top"] + o["height"], fh - 1e-3)
 
 
+class ChunkTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.m, cls.st, cls.tx = H.load("map_sage.json"), H.load("style_sage.json"), H.load("texts_sage.json")
+        cls.orig = H.load("facts_orig.json")
+        cls.batches = build_ops(cls.m, cls.st, cls.tx, cls.orig)
+        up = {a: {"media_id": f"MA_{a}", "pixel_size": [v["frame"][0] * 2, v["frame"][1] * 2], "alt_text": a}
+              for a, v in cls.m["assets"].items()}
+        cls.images = build_image_ops(cls.m, up, cls.orig)
+
+    def check_calls(self, batches, calls):
+        for pid, ops in batches.items():
+            cs = [c["operations"] for c in calls[pid]]
+            for c in calls[pid]:
+                self.assertEqual(c["page_index"], next(x["index"] for x in self.m["pages"] if x["id"] == pid))
+            self.assertTrue(all(0 < len(c) <= 60 for c in cs), [len(c) for c in cs])
+            self.assertTrue(all(sum(o["type"] == "update_fill" for o in c) <= 26 for c in cs))
+            self.assertEqual(sorted(json.dumps(o, sort_keys=True) for c in cs for o in c),
+                             sorted(json.dumps(o, sort_keys=True) for o in ops))          # nothing lost or doubled
+            where = {}
+            for i, c in enumerate(cs):
+                for o in c:
+                    where.setdefault(o["locator_id"], set()).add(i)
+            self.assertTrue(all(len(v) == 1 for v in where.values()), "an element's operations were split")
+            for loc in where:                                       # order within an element preserved
+                self.assertEqual([o["type"] for c in cs for o in c if o["locator_id"] == loc],
+                                 [o["type"] for o in ops if o["locator_id"] == loc])
+            for c in cs:
+                for o in c:
+                    if o["type"] == "update_fill":
+                        self.assertTrue(any(x["type"] == "crop_media" and x["locator_id"] == o["locator_id"] for x in c))
+
+    def test_the_187_op_page_is_cut_into_calls_of_at_most_60(self):
+        main = self.m["pages"][1]["id"]
+        self.assertEqual(len(self.batches[main]), 187)
+        calls = to_calls(self.m, self.batches, self.orig)
+        self.assertGreaterEqual(len(calls[main]), 4)
+        self.check_calls(self.batches, calls)
+
+    def test_images_never_separate_a_fill_from_its_crop(self):
+        calls = to_calls(self.m, self.images, self.orig)
+        self.assertGreater(sum(len(v) for v in calls.values()), 2)
+        self.check_calls(self.images, calls)
+        self.assertEqual(sum(o["type"] == "update_fill" for v in calls.values() for c in v for o in c["operations"]), 36)
+
+    def test_a_section_that_fits_stays_in_one_call(self):
+        main = self.m["pages"][1]["id"]
+        calls = to_calls(self.m, self.batches, self.orig)[main]
+        per_section = {}
+        for i, c in enumerate(calls):
+            for o in c["operations"]:
+                per_section.setdefault(self.orig[o["locator_id"]]["section"], []).append((i, o))
+        small = [s for s, v in per_section.items() if len(v) <= 60]
+        self.assertTrue(small)
+        for s in small:
+            self.assertEqual(len({i for i, _ in per_section[s]}), 1, s)
+
+    def test_works_without_facts_and_for_the_symbolic_mini_map(self):
+        calls = to_calls(self.m, self.batches)                     # section guessed from the locator
+        self.check_calls(self.batches, calls)
+        m, facts = H.mini_map(), H.mini_facts()
+        b = build_ops(m, H.mini_style(), H.mini_texts(), facts)
+        self.assertEqual(len(to_calls(m, b, facts)["PGmini01"]), 1)
+
+    def test_chunk_ops_edge_cases(self):
+        self.assertEqual(chunk_ops([]), [])
+        ops = [{"type": "replace_text", "locator_id": f"P-S{i // 5}-E{i}", "text": "x"} for i in range(130)]
+        cs = chunk_ops(ops, limit=60)
+        self.assertEqual([len(c) for c in cs], [60, 60, 10])
+        big = [{"type": "replace_text", "locator_id": "P-S-E", "text": str(i)} for i in range(61)]
+        with self.assertRaises(ValueError):
+            chunk_ops(big, limit=60)
+        titled = [{"type": "update_title", "title": "t"}] + ops[:3]
+        self.assertEqual(sum(len(c) for c in chunk_ops(titled)), 4)
+
+
 class VerifyBatchTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -381,6 +498,16 @@ class VerifyBatchTests(unittest.TestCase):
         after = self.after_for(ops)
         after[ops[0]["locator_id"]]["box"][0] += 5
         self.assertTrue(verify_batch(self.orig, after, ops))
+
+    def test_add_and_delete_page_are_forbidden(self):
+        for typ in ("add_page", "delete_page"):
+            found = verify_batch(self.orig, copy.deepcopy(self.orig), [{"type": typ}])
+            self.assertEqual(len(found), 1, found)
+            self.assertIn("forbidden", found[0])
+            self.assertIn(typ, found[0])
+        # update_title and speaker notes are allowed (no element of the facts)
+        ok = [{"type": "update_title", "title": "t"}, {"type": "replace_speaker_notes", "page_id": "p", "notes": "n"}]
+        self.assertEqual(verify_batch(self.orig, copy.deepcopy(self.orig), ok), [])
 
     def test_unsupported_operation_type_fails_closed(self):
         op = {"type": "delete_element", "locator_id": next(iter(self.orig))}
@@ -528,7 +655,11 @@ class CliTests(unittest.TestCase):
             r = H.run_cli("ops.py", "build", *args)
             self.assertEqual(r.returncode, 0, r.stderr)
             files = sorted(d.glob("ops_*.json"))
-            self.assertEqual(len(files), 2, r.stdout)
+            self.assertGreaterEqual(len(files), 5, r.stdout)       # page 1: one call; page 2 (187 operations): four or more
+            for f in files:
+                call = json.loads(f.read_text())
+                self.assertLessEqual(len(call["operations"]), 60, f)
+            self.assertTrue(any(f.name.endswith("_01.json") for f in files))
             self.assertTrue((d / "ops_notes.txt").exists())
             self.assertIn(str(d), r.stdout)
             batch = json.loads(files[0].read_text())
