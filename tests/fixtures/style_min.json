@@ -1,0 +1,14 @@
+{
+  "name": "Sage Linen",
+  "brief": "Calm sage and linen, soft watercolour botanicals.",
+  "palette": {"background": "#f4efe6", "accent": "#7d8f69", "ink": "#2f3a2c"},
+  "colour_roles": {"background": "background"},
+  "image_prompts": {
+    "hero": "soft morning light over a sage-green meadow, film photograph",
+    "florals": "loose watercolour eucalyptus and linen-white blossoms, transparent background",
+    "envelope": "cream linen paper texture, subtle fibres, flat lay",
+    "seal": "wax seal in muted sage green, watercolour illustration"
+  },
+  "fonts": {"heading": "Cormorant Garamond", "body": "Lato", "script": "Allura"},
+  "font_map": {"heading": "heading", "body": "body"}
+}

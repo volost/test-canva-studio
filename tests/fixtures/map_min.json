@@ -1,0 +1,32 @@
+{
+  "skeleton": "mini",
+  "design_id": "DAXXXXXXXXX",
+  "pages": [{"index": 1, "id": "PGmini01", "title": "Invitation"}],
+  "assets": {
+    "hero": {"kind": "photo", "frame": [1200, 800], "role": "hero", "transparent": false},
+    "florals": {"kind": "watercolour", "frame": [600, 600], "role": "decor", "transparent": true},
+    "envelope": {"kind": "composed", "frame": [1000, 700], "role": "envelope", "transparent": false},
+    "seal": {"kind": "watercolour", "frame": [200, 200], "role": "seal", "transparent": true}
+  },
+  "slots": [
+    {"locator": "p1/image/hero", "type": "image", "role": "hero", "asset": "hero", "personal": false, "column_px": null, "max_len": null, "original": null},
+    {"locator": "p1/image/florals", "type": "image", "role": "decor", "asset": "florals", "personal": false, "column_px": null, "max_len": null, "original": null},
+    {"locator": "p1/image/env-cover", "type": "image", "role": "envelope", "asset": "envelope", "personal": false, "column_px": null, "max_len": null, "original": null, "layer": "cover"},
+    {"locator": "p1/image/env-flap", "type": "image", "role": "envelope", "asset": "envelope", "personal": false, "column_px": null, "max_len": null, "original": null, "layer": "flap"},
+    {"locator": "p1/image/seal", "type": "image", "role": "seal", "asset": "seal", "personal": false, "column_px": null, "max_len": null, "original": null},
+    {"locator": "p1/colour/background", "type": "colour", "role": "background", "asset": null, "personal": false, "column_px": null, "max_len": null, "original": null},
+    {"locator": "p1/text/names", "type": "text", "role": "heading", "asset": null, "personal": true, "column_px": 600, "max_len": 20, "original": null},
+    {"locator": "p1/text/intro", "type": "text", "role": "body", "asset": null, "personal": false, "column_px": 600, "max_len": null, "original": "Together with their families, they invite you to celebrate their wedding day."}
+  ],
+  "envelope": {
+    "section_px": [1000, 700],
+    "tip": [500, 380],
+    "left_top": [0, 0],
+    "right_top": [1000, 0],
+    "seal_centre": [500, 380],
+    "seal_size": [200, 200],
+    "seal_rot_canva": 0.0,
+    "seal_asset": "seal"
+  },
+  "protected": ["p1/text/footer"]
+}
