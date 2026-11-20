@@ -34,7 +34,7 @@ _DESIGN_ID = re.compile(r"[A-Za-z0-9_-]+")
 STEP_OF = {"style_directions": "style", "write_texts": "texts", "apply_canva": "apply", "verify": "verify"}
 _ACTIVE = ("pending", "running")
 BAD_STATE = "пошкоджений state.json"
-NO_COPY = "Claude не записав id копії — перевірте /studio"
+NO_COPY = "Claude не записав id копії — перевірте /test-canva-studio"
 _ROUTES: list = []
 
 

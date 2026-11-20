@@ -1,13 +1,13 @@
 ---
-name: studio
+name: test-canva-studio
 disable-model-invocation: true
-description: Run the next job of the wedding-template studio. The owner types /studio (optionally followed by the studio root folder) after pressing a button in the studio page; Claude takes the oldest job from jobs/pending/, executes it (map a skeleton, propose styles, write texts, write a template into Canva, verify it) and files the result.
+description: Run the next job of the wedding-template studio. The owner types /test-canva-studio (optionally followed by the studio root folder) after pressing a button in the studio page; Claude takes the oldest job from jobs/pending/, executes it (map a skeleton, propose styles, write texts, write a template into Canva, verify it) and files the result.
 ---
 
-# /studio — execute ONE studio job
+# /test-canva-studio — execute ONE studio job
 
 The studio (a local web page) puts jobs as JSON files into `jobs/pending/`. You are the "Claude half" of the
-product: you execute exactly ONE job per `/studio`, write its result file, and move the job file to `done/` or
+product: you execute exactly ONE job per `/test-canva-studio`, write its result file, and move the job file to `done/` or
 `failed/`. A wrong step here damages a real Canva design or wastes the weekly limit, so every rule below is
 binding and every "check" must be run, not assumed.
 
@@ -64,7 +64,7 @@ Argument of this invocation (may be empty): `$ARGUMENTS`
    `state.json`, maps, assets) except through the snippets below (temp file + rename). Only the working files you
    created yourself in this job's work folder may be replaced. Move job files with `mv -n` only. `rm`, `git clean`,
    `git reset` are never used.
-10. One job per `/studio`. One writer per design: never run a second Canva job while another is in `running/`.
+10. One job per `/test-canva-studio`. One writer per design: never run a second Canva job while another is in `running/`.
 
 ## 1. Procedure
 

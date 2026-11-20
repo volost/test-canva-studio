@@ -1,4 +1,4 @@
-"""The /studio skill files (studio/skill/studio): structure checks on the markdown, and a run of the shipped
+"""The /test-canva-studio skill files (studio/skill/test-canva-studio): structure checks on the markdown, and a run of the shipped
 snippets (the precheck that refuses the purchased original, the result writer, the copy-id writer, the map and
 media checks) against temporary data. Standard library only; no network; no Canva."""
 import dataclasses
@@ -16,7 +16,7 @@ from app.guard import JOB_TYPES
 from app.store import create_template, read_json, write_json_atomic
 
 ROOT = Path(__file__).resolve().parent.parent
-SKILL = ROOT / "skill" / "studio"
+SKILL = ROOT / "skill" / "test-canva-studio"
 FX = Path(__file__).parent / "fixtures"
 ORIGINAL = "DAHarqlqips"
 FILES = ["SKILL.md"] + [f"jobs/{t}.md" for t in ("map_skeleton", "style_directions", "write_texts", "apply_canva", "verify")]
@@ -71,10 +71,12 @@ class StructureTests(unittest.TestCase):
 
     def test_frontmatter(self):
         fm = frontmatter(read("SKILL.md"))
-        self.assertEqual(fm.get("name"), "studio")
-        self.assertEqual(fm.get("disable-model-invocation"), "true", "a Canva-writing skill runs only when the owner types /studio")
+        self.assertEqual(fm.get("name"), "test-canva-studio")
+        self.assertEqual(fm.get("disable-model-invocation"), "true", "a Canva-writing skill runs only when the owner types /test-canva-studio")
         self.assertTrue(fm.get("description", "").strip())
         self.assertEqual(frontmatter("no front matter here"), {})                     # control
+        self.assertEqual(SKILL.name, fm["name"], "the folder name is the command name")
+        self.assertNotIn("/studio ", read("SKILL.md") + read("jobs/verify.md"), "the old command name must not come back")
 
     def test_mentioned_source_paths_exist(self):
         total = 0

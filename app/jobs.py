@@ -1,7 +1,7 @@
 """Job inbox: the studio queues jobs as JSON files under <root>/jobs/{pending,running,done,failed}/.
 
 The studio only ever CREATES job files (in pending/) and reads folders. It never moves, renames or
-deletes a job file: moving between folders is the /studio skill's work. At most one Canva write job
+deletes a job file: moving between folders is the /test-canva-studio skill's work. At most one Canva write job
 (apply_canva, verify) may sit in pending/ or running/; anything unreadable there counts as one.
 """
 import re
@@ -214,7 +214,7 @@ def list_jobs(cfg: Config) -> list[dict]:
             try:
                 mtime = path.stat().st_mtime
             except FileNotFoundError:
-                continue  # moved by /studio between listing and stat
+                continue  # moved by /test-canva-studio between listing and stat
             except OSError:
                 mtime = now
             age_s = max(0, int(now - mtime))

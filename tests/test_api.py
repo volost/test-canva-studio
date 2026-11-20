@@ -663,11 +663,11 @@ class FixRoundTests(ApiBase):
         self.finish_job(self.pending("apply_canva")[0], "done", "applied")
         t = self.get("/api/templates/t1")[1]
         self.assertEqual(t["state"]["steps"]["apply"]["status"], "draft")
-        self.assertEqual(t["job_results"]["apply"]["summary"], "Claude не записав id копії — перевірте /studio")
+        self.assertEqual(t["job_results"]["apply"]["summary"], "Claude не записав id копії — перевірте /test-canva-studio")
         self.assertEqual(t["job_results"]["apply"]["status"], "failed")
         st, body = self.post("/api/templates/t1/apply")
         self.assertEqual(st, 409)
-        self.assertEqual(body["error"], "Claude не записав id копії — перевірте /studio")
+        self.assertEqual(body["error"], "Claude не записав id копії — перевірте /test-canva-studio")
         self.assertEqual(self.pending("apply_canva"), [])
         # control: once the copy id is recorded the gate lifts and apply goes to review as normal
         self.set_state(canva_copy_id="DACOPY1")

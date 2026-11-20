@@ -29,7 +29,7 @@ The job: `inputs.design_id` = the skeleton's Canva design id (also in `BASE/skel
    `state.json`, maps, assets) except through the snippets below (temp file + rename). Only the working files you
    created yourself in this job's work folder may be replaced. Move job files with `mv -n` only. `rm`, `git clean`,
    `git reset` are never used.
-10. One job per `/studio`. One writer per design: never run a second Canva job while another is in `running/`.
+10. One job per `/test-canva-studio`. One writer per design: never run a second Canva job while another is in `running/`.
 
 THIS JOB IS READ-ONLY ON CANVA: the only `edit-design` call you may ever make is `finalize: "cancel"` with no operations,
 to end the read transaction. No `commit`, no `operations`, no `copy-design`, no upload. Reading the skeleton design is

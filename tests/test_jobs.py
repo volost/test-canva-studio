@@ -58,7 +58,7 @@ class JobsTestBase(unittest.TestCase):
         return d / name
 
     def move(self, job_id, src, dst):
-        # test-only helper standing in for the /studio skill; the studio code itself never moves files
+        # test-only helper standing in for the /test-canva-studio skill; the studio code itself never moves files
         (self.jobs / dst).mkdir(parents=True, exist_ok=True)
         os.rename(self.jobs / src / f"{job_id}.json", self.jobs / dst / f"{job_id}.json")
 

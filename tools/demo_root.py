@@ -74,7 +74,7 @@ def call(api: Api, method: str, path: str, body=None):
 
 
 def finish_job(cfg, job: dict, status: str = "done", summary: str = "ok", outputs=None, checks=None, folder: str = "done") -> None:
-    """What the /studio skill does: write the result, move the job file out of pending/."""
+    """What the /test-canva-studio skill does: write the result, move the job file out of pending/."""
     base = cfg.root / ("skeletons/" + job["skeleton"] if job["type"] == "map_skeleton" else "templates/" + job["template"])
     write_json_atomic(base / "jobs" / f"{job['id']}.result.json",
                       {"status": status, "summary": summary, "outputs": outputs or {}, "checks": checks or []})

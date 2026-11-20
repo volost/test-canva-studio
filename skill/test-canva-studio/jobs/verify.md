@@ -29,7 +29,7 @@ You arrive here from SKILL.md step 1.4: the job is in `jobs/running/`, the prech
    `state.json`, maps, assets) except through the snippets below (temp file + rename). Only the working files you
    created yourself in this job's work folder may be replaced. Move job files with `mv -n` only. `rm`, `git clean`,
    `git reset` are never used.
-10. One job per `/studio`. One writer per design: never run a second Canva job while another is in `running/`.
+10. One job per `/test-canva-studio`. One writer per design: never run a second Canva job while another is in `running/`.
 
 THIS JOB MAKES NO EDITS. It is classified as a Canva write job only so that two Canva jobs never overlap. Open a
 transaction only to read, end it with `finalize: "cancel"`, never `commit`, never send `operations`. Publishing is the

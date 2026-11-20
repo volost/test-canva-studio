@@ -341,7 +341,7 @@
       el('strong', { text: (JOB_TYPE_LABELS[info.type] || info.type || 'Завдання') + ': ' + label + '. ' }),
       info.summary ? el('span', { text: info.summary }) : null,
       el('div', { class: 'mono muted', text: strOr(info.job_id, '') }))];
-    if (info.copy_missing) kids.push(el('div', { class: 'msg-err', 'data-test': 'copy-missing', text: 'Claude не записав id копії — перевірте /studio. Повторний запис вимкнено, поки id копії не з’явиться.' }));
+    if (info.copy_missing) kids.push(el('div', { class: 'msg-err', 'data-test': 'copy-missing', text: 'Claude не записав id копії — перевірте /test-canva-studio. Повторний запис вимкнено, поки id копії не з’явиться.' }));
     return el('div', { class: kind, 'data-test': 'job-block', 'data-job-status': info.status }, kids);
   }
 
@@ -393,7 +393,7 @@
     S.dirty = false;
     var body = clear(qs('skeleton-body'));
     body.appendChild(el('p', null, 'Ідентифікатор дизайну в Canva: ', el('span', { class: 'mono', text: strOr(d.design_id, 'невідомий') })));
-    var jb = jobBlock(d.job, 'Карту ще не складено. У сесії Claude Code виконайте /studio, щоб завдання «Карта скелета» виконалося.');
+    var jb = jobBlock(d.job, 'Карту ще не складено. У сесії Claude Code виконайте /test-canva-studio, щоб завдання «Карта скелета» виконалося.');
     if (jb) body.appendChild(jb);
     if (Array.isArray(d.map_problems) && d.map_problems.length) {
       body.appendChild(el('div', { class: 'msg msg-err', 'data-test': 'map-problems' }, el('div', null, el('strong', { text: 'Проблеми карти:' }), el('ul', null, d.map_problems.map(function (p) { return el('li', { text: String(p) }); })))));
@@ -535,7 +535,7 @@
       if (info && (info.status === 'failed' || info.status === 'corrupt')) {
         box.appendChild(el('div', { class: 'msg msg-err', role: 'alert', 'data-test': 'job-alert', 'data-step': s },
           el('span', null, el('strong', { text: 'Крок «' + STEP_TITLES[s] + '»: ' + (RESULT_LABELS[info.status] || info.status) + '. ' }),
-            info.copy_missing ? 'Claude не записав id копії — перевірте /studio. ' : '', strOr(info.summary, ''))));
+            info.copy_missing ? 'Claude не записав id копії — перевірте /test-canva-studio. ' : '', strOr(info.summary, ''))));
       }
     });
     if (Array.isArray(t.problems) && t.problems.length) {
@@ -562,7 +562,7 @@
     if (!S.tpl.can_start[step]) return { ok: false, why: 'Спершу затвердіть попередні кроки.' };
     if (st === 'review' || (st === 'stale' && STALE_STEP_APPROVABLE.indexOf(step) !== -1)) return { ok: true };
     if (st === 'approved') return { ok: false, why: '' };
-    if (st === 'waiting_claude') return { ok: false, why: 'Чекаємо на Claude: у його сесії виконайте /studio.' };
+    if (st === 'waiting_claude') return { ok: false, why: 'Чекаємо на Claude: у його сесії виконайте /test-canva-studio.' };
     if (st === 'stale') return { ok: false, why: 'Крок застарів: виконайте його знову.' };
     return { ok: false, why: 'Крок ще не готовий до перегляду.' };
   }
@@ -608,7 +608,7 @@
   function requestInfo(step, extra) {
     var st = S.tpl.state.steps[step].status;
     if (!S.tpl.can_start[step]) return { ok: false, why: 'Спершу затвердіть попередні кроки.' };
-    if (st === 'waiting_claude') return { ok: false, why: 'Завдання вже в черзі: у сесії Claude Code виконайте /studio.' };
+    if (st === 'waiting_claude') return { ok: false, why: 'Завдання вже в черзі: у сесії Claude Code виконайте /test-canva-studio.' };
     if (st === 'approved') return { ok: false, why: 'Крок затверджено. Щоб повторити, спершу відкрийте його знову.' };
     if (extra) return extra;
     return { ok: true };
@@ -638,7 +638,7 @@
     root.appendChild(el('h3', { text: 'Бриф' }));
     root.appendChild(el('p', { id: 'brief-text', 'data-test': 'brief-text', style: 'white-space: pre-wrap', text: t.brief ? t.brief : 'Брифу немає.' }));
 
-    var jb = jobBlock(t.job_results && t.job_results.style, S.tpl.state.steps.style.status === 'waiting_claude' ? 'Напрями ще не готові. У сесії Claude Code виконайте /studio: Claude складе 2–3 напрями за брифом.' : null);
+    var jb = jobBlock(t.job_results && t.job_results.style, S.tpl.state.steps.style.status === 'waiting_claude' ? 'Напрями ще не готові. У сесії Claude Code виконайте /test-canva-studio: Claude складе 2–3 напрями за брифом.' : null);
     if (jb) root.appendChild(jb);
 
     root.appendChild(el('h3', { text: 'Напрями від Claude' }));
@@ -973,7 +973,7 @@
     var t = S.tpl, root = clear(qs('screen-texts'));
     panelHead('texts', 'Тексти', 'Claude пише тексти під ваш стиль, а ви правите кожен. Персональні дані (імена, дати) бувають лише в полях з позначкою.').forEach(function (n) { root.appendChild(n); });
 
-    var rb = requestButton('texts', 'request-texts', 'Попросити Claude написати тексти', '/texts/request', 'Створюю завдання…', null, 'Завдання створено. У сесії Claude Code виконайте /studio.');
+    var rb = requestButton('texts', 'request-texts', 'Попросити Claude написати тексти', '/texts/request', 'Створюю завдання…', null, 'Завдання створено. У сесії Claude Code виконайте /test-canva-studio.');
     var tools = [rb.btn];
     root.appendChild(el('div', { class: 'actions' }, tools));
     if (!rb.info.ok && rb.info.why) root.appendChild(el('p', { class: 'hint', text: rb.info.why }));
@@ -1050,13 +1050,13 @@
     panelHead('apply', 'Запис у Canva', null).forEach(function (n) { root.appendChild(n); });
     root.appendChild(el('div', { class: 'explain', 'data-test': 'apply-explain' },
       el('p', null, el('strong', { text: 'Запис у Canva виконує не ця сторінка, а Claude Code. ' }),
-        'Натисніть «Записати в Canva»: студія створить завдання. Потім виконайте ', el('code', { text: '/studio' }), ' у сесії Claude Code: Claude зробить копію скелета й запише в неї кольори, тексти та картинки. Оригінал і скелет не змінюються.')));
+        'Натисніть «Записати в Canva»: студія створить завдання. Потім виконайте ', el('code', { text: '/test-canva-studio' }), ' у сесії Claude Code: Claude зробить копію скелета й запише в неї кольори, тексти та картинки. Оригінал і скелет не змінюються.')));
     var hasCopy = !!(t.state && t.state.canva_copy_id);
-    var rb = requestButton('apply', 'apply-canva', hasCopy ? 'Записати в Canva ще раз' : 'Записати в Canva', '/apply', 'Створюю завдання…', null, 'Завдання створено. Тепер виконайте /studio у сесії Claude Code.');
+    var rb = requestButton('apply', 'apply-canva', hasCopy ? 'Записати в Canva ще раз' : 'Записати в Canva', '/apply', 'Створюю завдання…', null, 'Завдання створено. Тепер виконайте /test-canva-studio у сесії Claude Code.');
     root.appendChild(el('div', { class: 'actions' }, rb.btn));
     if (!rb.info.ok && rb.info.why) root.appendChild(el('p', { class: 'hint', text: rb.info.why }));
     var info = t.job_results && t.job_results.apply;
-    var jb = jobBlock(info, S.tpl.state.steps.apply.status === 'waiting_claude' ? 'Чекаємо на Claude: у його сесії виконайте /studio.' : null);
+    var jb = jobBlock(info, S.tpl.state.steps.apply.status === 'waiting_claude' ? 'Чекаємо на Claude: у його сесії виконайте /test-canva-studio.' : null);
     if (jb) root.appendChild(jb);
     var copy = t.state && t.state.canva_copy_id;
     root.appendChild(el('p', { id: 'copy-id-line', 'data-test': 'copy-id-line' }, 'Копія в Canva: ', copy ? designLink(copy) : el('span', { class: 'muted', text: 'ще не створена' })));
@@ -1088,13 +1088,13 @@
     panelHead('verify', 'Перевірка', 'Claude відкриває копію в Canva, експортує сторінки, вимірює й перевіряє в повноекранному перегляді. Тут ви бачите результат.').forEach(function (n) { root.appendChild(n); });
     var copy = t.state && t.state.canva_copy_id;
     var extra = copy ? null : { ok: false, why: 'Копії в Canva ще немає: спершу запишіть шаблон (крок 4).' };
-    var rb = requestButton('verify', 'verify-canva', 'Запустити перевірку', '/verify', 'Створюю завдання…', extra, 'Завдання створено. Тепер виконайте /studio у сесії Claude Code.');
+    var rb = requestButton('verify', 'verify-canva', 'Запустити перевірку', '/verify', 'Створюю завдання…', extra, 'Завдання створено. Тепер виконайте /test-canva-studio у сесії Claude Code.');
     root.appendChild(el('div', { class: 'actions' }, rb.btn, copy ? designLink(copy) : null));
     if (!rb.info.ok && rb.info.why) root.appendChild(el('p', { class: 'hint', text: rb.info.why }));
     root.appendChild(el('p', null, 'Копія в Canva: ', copy ? el('span', { class: 'mono', 'data-test': 'copy-id', text: String(copy) }) : el('span', { class: 'muted', text: 'ще не створена' })));
 
     var info = t.job_results && t.job_results.verify;
-    var jb = jobBlock(info, t.state.steps.verify.status === 'waiting_claude' ? 'Чекаємо на Claude: у його сесії виконайте /studio.' : null);
+    var jb = jobBlock(info, t.state.steps.verify.status === 'waiting_claude' ? 'Чекаємо на Claude: у його сесії виконайте /test-canva-studio.' : null);
     if (jb) root.appendChild(jb);
 
     root.appendChild(el('h3', { text: 'Таблиця перевірок' }));
