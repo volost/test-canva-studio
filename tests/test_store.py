@@ -50,6 +50,26 @@ class StoreTests(unittest.TestCase):
             read_json(p)
         self.assertEqual(ctx.exception.path, p)
 
+    def test_read_invalid_utf8_raises_corrupt(self):
+        p = self.tmp / "bytes.json"
+        p.write_bytes(b'{"a": "\xff\xfe"}')
+        with self.assertRaises(CorruptJSON) as ctx:
+            read_json(p)
+        self.assertEqual(ctx.exception.path, p)
+
+    def test_read_non_object_raises_corrupt(self):
+        for text in ("[1, 2]", '"x"', "3", "null", "true"):
+            with self.subTest(text=text):
+                p = self.tmp / "nonobj.json"
+                p.write_text(text, encoding="utf-8")
+                with self.assertRaises(CorruptJSON):
+                    read_json(p)
+
+    def test_read_object_still_ok(self):
+        p = self.tmp / "ok.json"
+        p.write_text("{}", encoding="utf-8")
+        self.assertEqual(read_json(p), {})
+
     def test_read_missing_raises_filenotfound(self):
         with self.assertRaises(FileNotFoundError):
             read_json(self.tmp / "nope.json")

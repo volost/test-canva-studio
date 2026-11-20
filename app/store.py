@@ -40,12 +40,15 @@ def write_json_atomic(path: Path, data) -> None:
 
 
 def read_json(path: Path) -> dict:
+    """Read a JSON object. Invalid UTF-8, invalid JSON, or JSON that is not an object -> CorruptJSON."""
     path = Path(path)
-    text = path.read_text(encoding="utf-8")
     try:
-        return json.loads(text)
-    except ValueError as e:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except ValueError as e:  # JSONDecodeError and UnicodeDecodeError are both ValueError
         raise CorruptJSON(path) from e
+    if not isinstance(data, dict):
+        raise CorruptJSON(path)
+    return data
 
 
 def _check_name(kind: str, name: str) -> str:
