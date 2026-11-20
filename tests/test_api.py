@@ -72,7 +72,7 @@ class ApiBase(unittest.TestCase):
     def call(self, method, path, body=None, raw=None):
         data = raw if raw is not None else (json.dumps(body, ensure_ascii=False).encode("utf-8") if body is not None else None)
         req = urllib.request.Request(f"http://127.0.0.1:{self.port}{path}", data=data, method=method,
-                                     headers={"Content-Type": "application/json"} if data is not None else {})
+                                     headers={"Content-Type": "application/json"} if method in ("POST", "PUT") or data is not None else {})
         try:
             with urllib.request.urlopen(req, timeout=20) as r:
                 status, payload = r.status, r.read()
@@ -593,6 +593,160 @@ class OnDiskValidationTests(ApiBase):
         self.assertEqual(st, 409)
         self.assertTrue(body["problems"])
         self.assertEqual(self.pending("apply_canva"), [])
+
+
+class FixRoundTests(ApiBase):
+    """Fix round 1: R18a/R18b stale cascade, R19 copy-id gate, R20 corrupt state isolation, R21 JSON-only writes."""
+
+    def all_approved(self):
+        self.apply_ready()
+        self.set_state(statuses={"apply": "approved", "verify": "approved"}, canva_copy_id="DACOPY1")
+
+    def statuses(self):
+        return {k: v["status"] for k, v in self.read_state()["steps"].items()}
+
+    # ---- R18a
+    def test_texts_request_on_approved_steps_stales_apply_and_verify(self):
+        self.all_approved()
+        self.assertEqual(self.post("/api/templates/t1/texts/request")[0], 200)
+        self.assertEqual(self.statuses(), {"style": "approved", "images": "approved", "texts": "waiting_claude",
+                                           "apply": "stale", "verify": "stale"})
+        # Exp A: the new result is reviewed and approved, but apply stays stale: no apply on old data
+        self.finish_job(self.pending("write_texts")[0])
+        self.assertEqual(self.get("/api/templates/t1")[1]["state"]["steps"]["texts"]["status"], "review")
+        self.assertEqual(self.post("/api/templates/t1/approve", {"step": "texts"})[0], 200)
+        self.assertEqual(self.statuses()["apply"], "stale")
+        self.assertEqual(self.statuses()["verify"], "stale")
+
+    def test_repeat_apply_stales_verify(self):  # Exp C
+        self.all_approved()
+        st, body = self.post("/api/templates/t1/apply")
+        self.assertEqual(st, 200, body)
+        self.assertEqual(self.statuses()["apply"], "waiting_claude")
+        self.assertEqual(self.statuses()["verify"], "stale")
+
+    # ---- R18b
+    def test_reopen_during_running_apply_stales_it_and_it_never_reaches_review(self):  # Exp B
+        self.apply_ready()
+        self.assertEqual(self.post("/api/templates/t1/apply")[0], 200)
+        apply_job = self.pending("apply_canva")[0]
+        self.assertEqual(self.post("/api/templates/t1/reopen", {"step": "texts"})[0], 200)
+        self.assertEqual(self.statuses()["apply"], "stale")
+        self.set_state(canva_copy_id="DACOPY1")
+        self.finish_job(apply_job)
+        t = self.get("/api/templates/t1")[1]
+        self.assertEqual(t["state"]["steps"]["apply"]["status"], "stale")  # a staled step never jumps to review
+        self.assertEqual(self.post("/api/templates/t1/approve", {"step": "texts"})[0], 200)
+        self.assertEqual(self.post("/api/templates/t1/approve", {"step": "apply"})[0], 409)
+
+    def test_canva_request_rechecks_startable_inside_the_lock(self):
+        self.apply_ready()
+        from app import api as api_mod
+        real = api_mod.Api._refresh
+
+        def refresh_then_owner_reopens(self_, name, jobs=None):
+            out = real(self_, name, jobs)  # the early look sees an approved state ...
+            st = self.read_state(name)
+            st["steps"]["texts"]["status"] = "stale"  # ... then the owner reopens before the request is made
+            (self.tdir(name) / "state.json").write_text(json.dumps(st), encoding="utf-8")
+            return out
+        with mock.patch.object(api_mod.Api, "_refresh", refresh_then_owner_reopens):
+            st, body = self.post("/api/templates/t1/apply")
+        self.assertEqual(st, 409)
+        self.assertEqual(self.pending("apply_canva"), [])
+        self.assertEqual(self.statuses()["apply"], "draft")
+
+    # ---- R19
+    def test_done_apply_without_copy_id_is_draft_and_blocks_reapply(self):
+        self.apply_ready()
+        self.assertEqual(self.post("/api/templates/t1/apply")[0], 200)
+        self.finish_job(self.pending("apply_canva")[0], "done", "applied")
+        t = self.get("/api/templates/t1")[1]
+        self.assertEqual(t["state"]["steps"]["apply"]["status"], "draft")
+        self.assertEqual(t["job_results"]["apply"]["summary"], "Claude не записав id копії — перевірте /studio")
+        self.assertEqual(t["job_results"]["apply"]["status"], "failed")
+        st, body = self.post("/api/templates/t1/apply")
+        self.assertEqual(st, 409)
+        self.assertEqual(body["error"], "Claude не записав id копії — перевірте /studio")
+        self.assertEqual(self.pending("apply_canva"), [])
+        # control: once the copy id is recorded the gate lifts and apply goes to review as normal
+        self.set_state(canva_copy_id="DACOPY1")
+        self.assertEqual(self.post("/api/templates/t1/apply")[0], 200)
+
+    def test_done_apply_with_copy_id_goes_to_review(self):
+        self.apply_ready()
+        self.assertEqual(self.post("/api/templates/t1/apply")[0], 200)
+        self.set_state(canva_copy_id="DACOPY1")
+        self.finish_job(self.pending("apply_canva")[0], "done", "applied")
+        self.assertEqual(self.get("/api/templates/t1")[1]["state"]["steps"]["apply"]["status"], "review")
+
+    # ---- R20
+    def test_state_missing_steps_or_invalid_json_never_500s_the_lists(self):
+        self.make_skeleton()
+        self.make_template("good")
+        self.make_template("nosteps")
+        self.make_template("broken")
+        (self.tdir("nosteps") / "state.json").write_text(json.dumps({"skeleton": "mini", "chosen": {}}), encoding="utf-8")
+        (self.tdir("broken") / "state.json").write_text("{not json", encoding="utf-8")
+        for name in ("nosteps", "broken"):
+            st, body = self.get(f"/api/templates/{name}")
+            self.assertEqual((st, body["error"]), (409, "пошкоджений state.json"))
+        st, jobs = self.get("/api/jobs")
+        self.assertEqual(st, 200)
+        self.assertEqual(set(jobs["template_errors"]), {"nosteps", "broken"})
+        st, gen = self.get("/api/gen")
+        self.assertEqual(st, 200)
+        self.assertEqual(gen["templates"]["nosteps"]["error"], "пошкоджений state.json")
+        st, lst = self.get("/api/templates")
+        self.assertEqual(st, 200)
+        rows = {r["name"]: r for r in lst["templates"]}
+        self.assertIn("error", rows["nosteps"])
+        self.assertIn("error", rows["broken"])
+        self.assertNotIn("error", rows["good"])
+        # control: the healthy template is still served and reconciled
+        self.assertEqual(self.get("/api/templates/good")[0], 200)
+        for route in ("/apply", "/approve", "/reopen"):
+            self.assertEqual(self.post("/api/templates/nosteps" + route, {"step": "style"})[0], 409)
+
+    # ---- R21
+    def test_writes_need_application_json(self):
+        self.make_skeleton()
+        self.make_template()
+        base = f"http://127.0.0.1:{self.port}"
+        for method, path, body in (("POST", "/api/templates", b'{"name":"t2","skeleton":"mini","brief":"x"}'),
+                                   ("POST", "/api/templates/t1/apply", b""),
+                                   ("PUT", "/api/templates/t1/texts", b'{"p1/text/names":"x"}')):
+            for ctype in ("text/plain", "application/x-www-form-urlencoded", "text/plain;charset=UTF-8", None):
+                with self.subTest(path=path, ctype=ctype):
+                    req = urllib.request.Request(base + path, data=body, method=method)
+                    req.remove_header("Content-type")
+                    if ctype:
+                        req.add_header("Content-Type", ctype)
+                    else:
+                        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+                        conn.putrequest(method, path)
+                        conn.putheader("Content-Length", str(len(body)))
+                        conn.endheaders(body)
+                        resp = conn.getresponse()
+                        self.assertEqual(resp.status, 415)
+                        self.assertIsInstance(json.loads(resp.read().decode("utf-8"))["error"], str)
+                        conn.close()
+                        continue
+                    try:
+                        urllib.request.urlopen(req, timeout=5)
+                        self.fail("accepted")
+                    except urllib.error.HTTPError as e:
+                        self.assertEqual(e.code, 415)
+                        self.assertIsInstance(json.loads(e.read().decode("utf-8"))["error"], str)
+        self.assertFalse((self.tdir("t2")).exists())
+        self.assertEqual(self.pending("apply_canva"), [])
+        self.assertFalse((self.tdir() / "texts.json").exists())
+        # control: the same requests with the right type (charset allowed) are accepted
+        req = urllib.request.Request(base + "/api/templates", data=b'{"name":"t2","skeleton":"mini","brief":"x"}', method="POST",
+                                     headers={"Content-Type": "application/json; charset=utf-8"})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            self.assertEqual(r.status, 200)
+        self.assertEqual(self.get("/api/health")[0], 200)  # GET needs no type
 
 
 class ImageTests(ApiBase):

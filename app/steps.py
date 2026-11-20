@@ -43,11 +43,19 @@ def approve(state: dict, step: str) -> dict:
     return set_status(state, step, "approved")
 
 
-def reopen(state: dict, step: str) -> dict:
-    """Return a copy with `step` back in `review` and later approved/review steps marked `stale`."""
+def invalidate_after(state: dict, step: str) -> dict:
+    """Return a copy with every step after `step` that is approved, review or waiting_claude marked `stale`.
+    A step waiting for Claude is stale too: its result will be built on data that has changed."""
     _check_step(step)
-    out = set_status(state, step, "review")
+    out = copy.deepcopy(state)
     for later in STEPS[STEPS.index(step) + 1 :]:
-        if out["steps"][later]["status"] in ("approved", "review"):
+        if out["steps"][later]["status"] in ("approved", "review", "waiting_claude"):
             _stamp(out, later, "stale")
     return out
+
+
+def reopen(state: dict, step: str) -> dict:
+    """Return a copy with `step` back in `review` and every later approved/review/waiting_claude step marked
+    `stale` (changed in fix round 1: a later step waiting for Claude used to be left alone, so its result
+    could be approved on top of old data)."""
+    return invalidate_after(set_status(state, step, "review"), step)

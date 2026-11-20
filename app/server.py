@@ -70,6 +70,10 @@ def _make_handler(cfg: Config, api: Api):
                 return
             # always drain the body (capped) so an early error does not reset the connection
             raw = self.rfile.read(min(length, MAX_BODY + 1)) if length else b""
+            if method != "GET" and self.headers.get_content_type() != "application/json":
+                # a cross-origin <form> can only send text/plain or form types: refuse those writes
+                self._json(415, {"error": "потрібен Content-Type: application/json"})
+                return
             status, payload = api.handle(method, path, raw)
             self._json(status, payload)
 

@@ -73,15 +73,27 @@ class StepsTests(unittest.TestCase):
             {"style": "approved", "images": "review", "texts": "stale", "apply": "stale", "verify": "stale"},
         )
 
-    def test_reopen_leaves_other_later_statuses(self):
+    def test_reopen_stales_later_waiting_claude_too(self):
+        # fix round 1 (R18b): a later step waiting for Claude is built on old data, so it goes stale as well
         s = make_state("draft")
         s["steps"]["texts"]["status"] = "review"
         s["steps"]["apply"]["status"] = "waiting_claude"
         s = reopen(s, "style")
         self.assertEqual(
             statuses(s),
-            {"style": "review", "images": "draft", "texts": "stale", "apply": "waiting_claude", "verify": "draft"},
+            {"style": "review", "images": "draft", "texts": "stale", "apply": "stale", "verify": "draft"},
         )
+
+    def test_invalidate_after_leaves_the_step_itself_and_draft_stale_alone(self):
+        from app.steps import invalidate_after
+        s = make_state("approved")
+        s["steps"]["verify"]["status"] = "draft"
+        s["steps"]["apply"]["status"] = "waiting_claude"
+        before = copy.deepcopy(s)
+        out = invalidate_after(s, "texts")
+        self.assertEqual(statuses(out), {"style": "approved", "images": "approved", "texts": "approved",
+                                         "apply": "stale", "verify": "draft"})
+        self.assertEqual(s, before)
 
     def test_reopen_rejects_unknown_step_and_does_not_mutate(self):
         orig = make_state("approved")

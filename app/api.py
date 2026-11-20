@@ -33,6 +33,8 @@ _DESIGN_ID = re.compile(r"[A-Za-z0-9_-]+")
 # job type -> the step it works on
 STEP_OF = {"style_directions": "style", "write_texts": "texts", "apply_canva": "apply", "verify": "verify"}
 _ACTIVE = ("pending", "running")
+BAD_STATE = "пошкоджений state.json"
+NO_COPY = "Claude не записав id копії — перевірте /studio"
 _ROUTES: list = []
 
 
@@ -61,6 +63,14 @@ def _opt(path: Path):
         return None, f"файл {path.name} пошкоджено"
     except OSError as e:
         return None, f"файл {path.name} не читається: {e.strerror or e}"
+
+
+def _state_ok(state) -> bool:
+    """Valid JSON is not enough: the step table every handler indexes must be complete."""
+    st = state.get("steps") if isinstance(state, dict) else None
+    return (isinstance(st, dict)
+            and all(isinstance(st.get(s), dict) and st[s].get("status") in steps.STATUSES for s in STEPS)
+            and isinstance(state.get("chosen", {}), dict))
 
 
 def _text(body: dict, key: str) -> str:
@@ -151,6 +161,16 @@ class Api:
             raise ApiError(404, f"шаблон {name} не знайдено")
         return d
 
+    def _state(self, d: Path) -> dict:
+        """state.json, or 409 «пошкоджений state.json» when it is unreadable or lacks the step table."""
+        try:
+            state = read_json(d / "state.json")
+        except (CorruptJSON, OSError):
+            raise ApiError(409, BAD_STATE) from None
+        if not _state_ok(state):
+            raise ApiError(409, BAD_STATE)
+        return state
+
     def _skel(self, name: str) -> Path:
         try:
             d = skeleton_dir(self.cfg, name)
@@ -195,7 +215,7 @@ class Api:
     def _mutate(self, d: Path, fn):
         """Locked read-modify-write of state.json; `fn(state)` returns the new state or None (no change)."""
         with STATE_LOCK:
-            state = read_json(d / "state.json")
+            state = self._state(d)
             new = fn(state)
             if new is None:
                 return state
@@ -222,18 +242,28 @@ class Api:
         return "/".join(parts)
 
     # ------------------------------------------------------------------ R13 / R14 reconcile
+    def _raw_infos(self, name: str, jobs: list) -> dict:
+        return {STEP_OF[t]: _result_info(self.cfg, j) for t, j in _latest(jobs, template=name).items() if t in STEP_OF}
+
+    @staticmethod
+    def _effective(infos: dict, state: dict) -> dict:
+        """A done apply_canva with no canva_copy_id recorded counts as failed, visibly (R19)."""
+        a = infos.get("apply")
+        if a and a["status"] == "done" and state.get("canva_copy_id") is None:
+            return dict(infos, apply=dict(a, status="failed", summary=NO_COPY, copy_missing=True))
+        return infos
+
     def _reconcile_jobs(self, name: str, jobs: list) -> dict:
         """waiting_claude steps follow their newest job's result. Returns {step: result info} for the payload."""
-        infos = {STEP_OF[t]: _result_info(self.cfg, j) for t, j in _latest(jobs, template=name).items() if t in STEP_OF}
+        raw = self._raw_infos(name, jobs)
 
         def fn(state):
             new = state
-            for step, info in infos.items():
-                if state["steps"].get(step, {}).get("status") == "waiting_claude" and info["status"] is not None:
+            for step, info in self._effective(raw, state).items():
+                if state["steps"][step]["status"] == "waiting_claude" and info["status"] is not None:
                     new = steps.set_status(new, step, "review" if info["status"] == "done" else "draft")
             return None if new is state else new
-        self._mutate(template_dir(self.cfg, name), fn)
-        return infos
+        return self._effective(raw, self._mutate(template_dir(self.cfg, name), fn))
 
     def _reconcile_images(self, name: str, m, data: dict) -> None:
         """draft -> review once every asset of the map has a chosen file and none is generating."""
@@ -252,7 +282,7 @@ class Api:
     def _refresh(self, name: str, jobs=None) -> dict:
         """Process finished generations, then reconcile job and images steps. Returns the tickets data."""
         d = self._tpl(name)
-        m, _ = self._map_opt(read_json(d / "state.json").get("skeleton"))
+        m, _ = self._map_opt(self._state(d).get("skeleton"))
         data = tickets.sync(self.cfg, self.queue, name, m)  # GEN_LOCK before STATE_LOCK
         self._reconcile_jobs(name, jobs if jobs is not None else list_jobs(self.cfg))
         self._reconcile_images(name, m, data)
@@ -337,8 +367,8 @@ class Api:
         out = []
         for name in list_templates(self.cfg):
             state, err = _opt(template_dir(self.cfg, name) / "state.json")
-            if state is None:
-                out.append({"name": name, "error": err})
+            if state is None or not _state_ok(state):
+                out.append({"name": name, "error": err or BAD_STATE})
                 continue
             out.append({"name": name, "skeleton": state.get("skeleton"),
                         "steps": {k: v.get("status") for k, v in (state.get("steps") or {}).items()}})
@@ -366,14 +396,14 @@ class Api:
         d = self._tpl(t)
         all_jobs = list_jobs(self.cfg)
         data = self._refresh(t, all_jobs)
-        state = read_json(d / "state.json")
+        state = self._state(d)
         skeleton = state.get("skeleton")
         m, map_problems = self._map_opt(skeleton)
         style, style_err = _opt(d / "style.json")
         texts, texts_err = _opt(d / "texts.json")
         brief, _ = _opt(d / "brief.json")
         mine = [j for j in all_jobs if j.get("template") == t]
-        job_results = {STEP_OF[ty]: _result_info(self.cfg, j) for ty, j in _latest(mine).items() if ty in STEP_OF}
+        job_results = self._effective(self._raw_infos(t, all_jobs), state)
         warnings = texts_mod.length_warnings(texts, m) if texts is not None and m else {}
         return {
             "name": t, "skeleton": skeleton, "state": state, "brief": (brief or {}).get("brief"),
@@ -411,7 +441,7 @@ class Api:
     @route("PUT", r"/api/templates/(?P<t>[^/]+)/style")
     def put_style(self, body, t):
         d = self._tpl(t)
-        m = self._need_map(read_json(d / "state.json").get("skeleton"))
+        m = self._need_map(self._state(d).get("skeleton"))
         problems = schema.validate_style(body, m)
         if problems:
             raise ApiError(400, "; ".join(problems), problems=problems)
@@ -423,7 +453,7 @@ class Api:
     @route("PUT", r"/api/templates/(?P<t>[^/]+)/texts")
     def put_texts(self, body, t):
         d = self._tpl(t)
-        m = self._need_map(read_json(d / "state.json").get("skeleton"))
+        m = self._need_map(self._state(d).get("skeleton"))
         problems = texts_mod.validate_texts(body, m)
         if problems:
             raise ApiError(400, "; ".join(problems), problems=problems)
@@ -439,9 +469,18 @@ class Api:
                 "texts_file": self._rel("templates", t, "texts.json"),
                 "manifest_file": self._rel("templates", t, "assets", "manifest.json")}
 
-    def _request(self, t, d, state, jtype, inputs, target=None) -> dict:
-        job = create_job(self.cfg, jtype, state["skeleton"], t, inputs, target)
-        self._set_status(d, STEP_OF[jtype], "waiting_claude")
+    def _request(self, t, d, jtype, prepare) -> dict:
+        """Create a Claude job and mark its step waiting_claude. Everything runs under STATE_LOCK on a fresh
+        state: startable check, `prepare(state) -> (inputs, target)` (its own refusals), the job, and the
+        status change. Steps AFTER the requested one that are approved/review/waiting_claude become stale
+        (re-running a step outdates what was built on its old result)."""
+        step = STEP_OF[jtype]
+        with STATE_LOCK:
+            state = self._state(d)
+            self._require_startable(state, step)
+            inputs, target = prepare(state)
+            job = create_job(self.cfg, jtype, state["skeleton"], t, inputs, target)
+            self._mutate(d, lambda s: steps.set_status(steps.invalidate_after(s, step), step, "waiting_claude"))
         return {"job": job}
 
     def _require_startable(self, state, step) -> None:
@@ -452,32 +491,36 @@ class Api:
     def request_texts(self, body, t):
         d = self._tpl(t)
         self._refresh(t)
-        state = read_json(d / "state.json")
-        self._require_startable(state, "texts")
-        self._need_valid(d, self._need_map(state["skeleton"]), "style")
-        if any(j.get("template") == t and j.get("type") == "write_texts" and j.get("state") in _ACTIVE for j in list_jobs(self.cfg)):
-            raise ApiError(409, "завдання write_texts уже в черзі")
-        brief, _ = _opt(d / "brief.json")
-        inputs = dict(self._paths(t, state["skeleton"]), brief=(brief or {}).get("brief"))
-        return self._request(t, d, state, "write_texts", inputs)
+
+        def prepare(state):
+            self._need_valid(d, self._need_map(state["skeleton"]), "style")
+            if any(j.get("template") == t and j.get("type") == "write_texts" and j.get("state") in _ACTIVE
+                   for j in list_jobs(self.cfg)):
+                raise ApiError(409, "завдання write_texts уже в черзі")
+            brief, _ = _opt(d / "brief.json")
+            return dict(self._paths(t, state["skeleton"]), brief=(brief or {}).get("brief")), None
+        return self._request(t, d, "write_texts", prepare)
 
     def _canva_request(self, t, jtype):
         d = self._tpl(t)
         self._refresh(t)
-        state = read_json(d / "state.json")
-        step = STEP_OF[jtype]
-        self._require_startable(state, step)
-        copy_id = state.get("canva_copy_id")
-        if jtype == "verify" and copy_id is None:
-            raise ApiError(409, "копії в Canva ще немає: спершу запишіть шаблон (apply)")
-        if canva_busy(self.cfg):
-            raise ApiError(409, "Canva уже зайнята іншим завданням: дочекайтесь його результату")
-        inputs = dict(self._paths(t, state["skeleton"]), chosen=state.get("chosen") or {})
-        if jtype == "apply_canva":
-            m = self._need_map(state["skeleton"])
-            self._need_valid(d, m, "style")
-            inputs["texts"] = self._need_valid(d, m, "texts")  # the exact strings travel inside the job
-        return self._request(t, d, state, jtype, inputs, copy_id)
+
+        def prepare(state):
+            copy_id = state.get("canva_copy_id")
+            if jtype == "verify" and copy_id is None:
+                raise ApiError(409, "копії в Canva ще немає: спершу запишіть шаблон (apply)")
+            if jtype == "apply_canva" and self._effective(self._raw_infos(t, list_jobs(self.cfg)), state).get(
+                    "apply", {}).get("copy_missing"):
+                raise ApiError(409, NO_COPY)  # re-applying with target null would create a second copy
+            if canva_busy(self.cfg):
+                raise ApiError(409, "Canva уже зайнята іншим завданням: дочекайтесь його результату")
+            inputs = dict(self._paths(t, state["skeleton"]), chosen=state.get("chosen") or {})
+            if jtype == "apply_canva":
+                m = self._need_map(state["skeleton"])
+                self._need_valid(d, m, "style")
+                inputs["texts"] = self._need_valid(d, m, "texts")  # the exact strings travel inside the job
+            return inputs, copy_id
+        return self._request(t, d, jtype, prepare)
 
     @route("POST", r"/api/templates/(?P<t>[^/]+)/apply")
     def apply(self, body, t):
@@ -507,7 +550,7 @@ class Api:
         d = self._tpl(t)
         step = self._step(body)
         data = self._refresh(t)
-        state = read_json(d / "state.json")
+        state = self._state(d)
         self._check_approvable(state, step)
         chosen_before = dict(state.get("chosen") or {})
         if step in ("style", "texts"):
@@ -522,7 +565,7 @@ class Api:
                 raise ApiError(409, "перевірка картинок не пройшла: " + "; ".join(problems), problems=problems)
             assets.build_manifest(d, m)
         with STATE_LOCK:
-            state = read_json(d / "state.json")
+            state = self._state(d)
             self._check_approvable(state, step)
             if step == "images" and (state.get("chosen") or {}) != chosen_before:
                 raise ApiError(409, "вибір картинок змінився під час перевірки: повторіть")
@@ -535,7 +578,7 @@ class Api:
         d = self._tpl(t)
         step = self._step(body)
         with STATE_LOCK:
-            state = read_json(d / "state.json")
+            state = self._state(d)
             if state["steps"][step]["status"] != "approved":
                 raise ApiError(409, f"крок {step} не затверджено, відкривати нічого")
             new = steps.reopen(state, step)
@@ -547,7 +590,7 @@ class Api:
     def generate(self, body, t):
         d = self._tpl(t)
         self._refresh(t)
-        state = read_json(d / "state.json")
+        state = self._state(d)
         self._require_startable(state, "images")
         m = self._need_map(state["skeleton"])
         style = self._need_valid(d, m, "style")
@@ -586,28 +629,30 @@ class Api:
         asset, file = body.get("asset"), body.get("file")
         if not isinstance(asset, str) or not isinstance(file, str):
             raise ApiError(400, "потрібні рядкові поля 'asset' і 'file'")
-        m = self._need_map(read_json(d / "state.json").get("skeleton"))
+        m = self._need_map(self._state(d).get("skeleton"))
         if asset not in m["assets"]:
             raise ApiError(400, f"ассета {asset!r} немає в карті")
         with STATE_LOCK:
-            before = (read_json(d / "state.json").get("chosen") or {}).get(asset)
+            before = (self._state(d).get("chosen") or {}).get(asset)
             assets.choose(d, asset, file)  # AssetError -> 400
             if before != file:
                 self._mutate(d, lambda s: steps.reopen(s, "images") if s["steps"]["images"]["status"] == "approved" else None)
             self._reconcile_images(t, m, tickets.load(self.cfg, t))
-            state = read_json(d / "state.json")
+            state = self._state(d)
         return {"chosen": state["chosen"], "state": state}
 
     # ------------------------------------------------------------------ jobs / generations
     @route("GET", r"/api/jobs")
     def jobs(self, body):
         all_jobs = list_jobs(self.cfg)
+        bad = {}
         for name in list_templates(self.cfg):
             try:
                 self._reconcile_jobs(name, all_jobs)
-            except CorruptJSON:
-                continue  # that template's state is unreadable; the list must still answer
-        return {"jobs": [dict(j, result=_result_info(self.cfg, j) if j.get("type") else None) for j in all_jobs]}
+            except ApiError as e:  # that template's state is unusable; the list must still answer
+                bad[name] = e.message
+        return {"jobs": [dict(j, result=_result_info(self.cfg, j) if j.get("type") else None) for j in all_jobs],
+                "template_errors": bad}
 
     @route("GET", r"/api/gen")
     def gen(self, body):
@@ -615,7 +660,8 @@ class Api:
         for name in list_templates(self.cfg):
             try:
                 data = self._refresh(name)
-            except CorruptJSON:
+            except ApiError as e:
+                out[name] = {"error": e.message, "pending": [], "recent": []}
                 continue
             if data["pending"] or data["recent"]:
                 out[name] = {"pending": tickets.with_queue_state(self.queue, data["pending"]), "recent": data["recent"]}
