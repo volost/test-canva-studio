@@ -1,6 +1,6 @@
 # Studio — resume point
 
-Updated: 2026-11-20. Current state only; history is in the log `.superpowers/sdd/PLAN/progress.md` and in `git log`.
+Updated: 2026-11-21. Current state only; history is in the log `.superpowers/sdd/PLAN/progress.md` and in `git log`.
 
 ## State
 
@@ -46,6 +46,16 @@ Updated: 2026-11-20. Current state only; history is in the log `.superpowers/sdd
   browser `studio-demo` is in `/Users/volost/GitRepos/canva/.claude/launch.json`. The script seeds the folder
   anew each time and refuses a non-empty one, so **before every launch** a new empty folder must be set in `launch.json`
   (the old `scratchpad/demo1` is already seeded).
+
+## Language and comments (owner's rules, 2026-11-21)
+
+- Documentation, code comments, instructions and commit messages: English. The studio UI and every
+  owner-facing message (API messages the UI shows, run.sh/demo terminal output, Ukrainian result summaries,
+  the owner's report in `etsy-report/`) stay Ukrainian.
+- Add comments wherever another model needs them to continue: module purpose, non-obvious decisions and the
+  reason. Handover comments were added on 2026-11-21 (`bc01df3`); keep doing it for all new code.
+- Translated files outside this repo keep their Ukrainian originals next to them as `*.uk.md`.
+- The Z-Image Turbo licence is not to be checked (owner, 2026-11-21).
 
 ## Before starting a new session
 
