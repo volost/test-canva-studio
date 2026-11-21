@@ -1,5 +1,7 @@
 # Wedding-website template studio
 
+**New developer?** Start with [docs/ONBOARDING.md](docs/ONBOARDING.md) — the first-day checklist (access, Canva, setup, first session).
+
 A local web application plus a Claude Code skill that together produce new visual styles of a Canva wedding-website
 template (pages with sections and an "envelope reveal" opening) from one hand-made "skeleton" design.
 

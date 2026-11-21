@@ -1,6 +1,7 @@
 # CLAUDE.md — rules for a Claude session in this repository
 
-This file is loaded when Claude Code is opened in the repo root. Read it fully, then `STATUS.md`. Human setup is in `README.md`.
+This file is loaded when Claude Code is opened in the repo root. Read it fully, then `STATUS.md`. Human setup is in `README.md`; a new developer's first-day
+checklist (access, Canva sharing, first session) is `docs/ONBOARDING.md`.
 
 ## What this project is
 
