@@ -181,4 +181,6 @@ how to split the generalised scripts into modules; the look of the overview shee
 3. How much of the limit and time one template takes through the studio.
 4. The Canva tool `create-design` as a source of the skeleton — only with the owner's permission (the test will create a design in
    their account).
-5. The licence of the Z-Image Turbo model for commercial use (a sales question, postponed together with Etsy).
+5. The licence of the Z-Image Turbo model for commercial use — not to be checked: the owner's decision of
+   2026-11-21 («не перевіряй ліцензію Z-Image Turbo», "do not check the Z-Image Turbo licence"). Do not research it
+   or offer it as a task.
