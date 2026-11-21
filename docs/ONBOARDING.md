@@ -20,6 +20,8 @@ repository is in English, and the studio's own interface is in Ukrainian on purp
 - [ ] **Canva designs.** Ask the owner to share with your Canva account (Share → add your e-mail → *Can edit*):
       - the test copy `DAHason1g_M` — the development skeleton the studio is built and tested on (PLAN Task 13 uses it);
       - later, the owner's own skeleton when it exists.
+      Then let your Claude session make **your own** copy of the test copy and register it as the development
+      skeleton: follow [docs/CANVA_TEST_COPY.md](CANVA_TEST_COPY.md). A Canva design cannot be stored in git.
       The purchased original `DAHarqlqips` must **never** be edited. You do not need access to it; if you have it, treat
       it as read-only. The studio refuses it as a target (`forbidden_design_ids` in `config.json`), keep it there.
       Note: when the studio's skill runs `copy-design`, the new copy is created in the Canva account of **whoever's

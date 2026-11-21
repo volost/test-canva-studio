@@ -92,7 +92,8 @@ checklist (access, Canva sharing, first session) is `docs/ONBOARDING.md`.
 ## Canva access
 
 The designs (`DAHarqlqips` original — never edit; `DAHason1g_M` — disposable test copy) are in the owner's Canva account. A developer
-must have them shared by the owner and must connect their own Canva account to the Canva connector in Claude. Use the connector
+must have them shared by the owner and must connect their own Canva account to the Canva connector in Claude. How to make your own test copy
+and register it as the development skeleton: `docs/CANVA_TEST_COPY.md`. Use the connector
 tools the skill lists and no others; they are deferred tools, load them with ToolSearch before first use. The connector's known
 behaviour is in `docs/reference/PLAYBOOK.md` §4 and `docs/DECISIONS.md` §3.
 
