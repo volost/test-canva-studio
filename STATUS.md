@@ -13,7 +13,8 @@ How to set up and run: `README.md`. Rules for a Claude session: `CLAUDE.md`.
   Claude Code session opened in the repo root. Machine paths are no longer in git: `config.example.json` is committed,
   `config.json` is local (git-ignored, copied from the example); `run.sh` reads every path and port from it. The
   reference notes the skill needs are in `docs/reference/`; the machine-local project notes of the owner were folded into
-  `docs/DECISIONS.md`. The remote repository is created by the owner's controller session, not recorded here.
+  `docs/DECISIONS.md`. Remote: private GitHub repository https://github.com/volost/test-canva-studio (created and first pushed on
+  2026-11-21 at `f14dceb`; the owner gives access to other developers). Work goes through branches; the owner merges.
 - Repository: git, branch `main`, no `Co-Authored-By` lines. A `.gitignore` is NOT committed (the owner's global
   gitignore ignores files named `.gitignore`); the README lists the lines every clone should add to `.git/info/exclude`.
 - **Done: Tasks 1–12** (`af9c9c2..f566570`), each passed review; the full suite — **457/457** when last counted on
