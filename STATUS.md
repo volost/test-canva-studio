@@ -22,9 +22,9 @@ How to set up and run: `README.md`. Rules for a Claude session: `CLAUDE.md`.
   and with which caveats — the ledger, the `Task N: complete` lines.
 - **The command is called `/test-canva-studio`** (owner's decision 2026-11-20; historically `/studio` in DESIGN/PLAN).
   **The skill now lives in `.claude/skills/test-canva-studio/` inside this repo** (moved with `git mv` on 2026-11-21), so a
-  Claude Code session opened in the repo root has the command with no copy step. The old copy at
-  `/Users/volost/GitRepos/canva/.claude/skills/test-canva-studio` on the owner's machine is **stale** (it was a copy of the
-  pre-move text); the owner decides what to do with it. Nothing was deleted.
+  Claude Code session opened in the repo root has the command with no copy step. The old installed copy
+  outside the repo (on the owner's machine) was removed on 2026-11-21 on the owner's command; its content is identical to
+  commit `f566570` (`skill/test-canva-studio/`).
 - **The Task 12 dry run was done on 2026-11-20** in a test folder on the owner's machine: the `verify` job on `DAHarqlqips`
   was rejected before any call to Canva; `write_texts` → `done/` (45 texts, 6 checks with controls), the studio shows the
   texts, the step is "ready for review". The first `write_texts` failed because the demo skeleton had no `facts.json` and no
