@@ -1,12 +1,12 @@
-/* Студія шаблонів: один сторінковий інтерфейс над JSON API (app/api.py).
+/* Template Studio: a single-page interface over the JSON API (app/api.py).
  *
- * Правила цього файла:
- *  - будь-який рядок, що прийшов із даних чи файлів, потрапляє на сторінку лише через textContent /
- *    setAttribute / createElement (helper el); жодного вставлення HTML-рядків і жодного виконання рядків як коду;
- *  - src картинок — лише шляхи /files/... з відповідей API; href — лише фіксований префікс + перевірений id;
- *  - кожен POST/PUT іде з Content-Type: application/json (без тіла — {});
- *  - опитування: GET /api/jobs (+ /api/health) кожні 3 с ланцюжком setTimeout, GET /api/gen поки є
- *    генерації в очікуванні; форми, які редагує власник, опитування не перемальовує.
+ * Rules of this file:
+ *  - any string that came from data or files reaches the page only through textContent /
+ *    setAttribute / createElement (helper el); no insertion of HTML strings and no execution of strings as code;
+ *  - image src is only /files/... paths from API responses; href is only a fixed prefix + a validated id;
+ *  - every POST/PUT is sent with Content-Type: application/json (with no body: {});
+ *  - polling: GET /api/jobs (+ /api/health) every 3 s as a setTimeout chain, GET /api/gen while there are
+ *    generations pending; forms the owner is editing are not redrawn by polling.
  */
 (function () {
   'use strict';

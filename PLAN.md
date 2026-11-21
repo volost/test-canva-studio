@@ -1,104 +1,106 @@
-# Студія шаблонів — план будування
+# Template Studio — build plan
+
+Note: The command was renamed to /test-canva-studio on 2026-11-20 (owner's decision).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or
 > superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** локальна веб-студія, яка покроково (стиль → картинки → тексти → запис у Canva → перевірка) робить
-новий стиль весільного сайту на копії скелета в Canva; запис у Canva виконує сесія Claude Code через
-скриньку завдань.
+**Goal:** a local web studio that step by step (style → pictures → texts → write to Canva → check) makes a
+new wedding-website style on a copy of the skeleton in Canva; the write to Canva is performed by a Claude Code session through
+the job inbox.
 
-**Architecture:** один Python-процес (стандартна бібліотека, `http.server`) віддає HTML/JS-інтерфейс і JSON API
-на `127.0.0.1`; стан — файли в `studio/skeletons/`, `studio/templates/`, `studio/jobs/`. Картинки студія
-генерує сама через HTTP API ComfyUI. Кроки, що потребують Claude (карта скелета, напрями стилю, тексти,
-запис у Canva, перевірка), студія кладе завданнями в `jobs/pending/`; skill `/studio` у сесії Claude Code їх
-виконує скриптами з `studio/canva/`.
+**Architecture:** one Python process (standard library, `http.server`) serves the HTML/JS interface and the JSON API
+on `127.0.0.1`; state is files in `studio/skeletons/`, `studio/templates/`, `studio/jobs/`. The studio
+generates pictures itself through the ComfyUI HTTP API. The steps that need Claude (skeleton map, style directions, texts,
+write to Canva, check) are put by the studio as jobs into `jobs/pending/`; the `/studio` skill in a Claude Code session
+executes them with the scripts from `studio/canva/`.
 
-**Tech Stack:** Python 3.13 із середовища ComfyUI (PIL 12.3, numpy 2.5, scipy — є; pytest — немає, тому
-`unittest`); HTML + vanilla JS без збірки; ComfyUI + Z-Image Turbo; конектор Canva (MCP) у Claude Code.
+**Tech Stack:** Python 3.13 from the ComfyUI environment (PIL 12.3, numpy 2.5, scipy — present; pytest — absent, so
+`unittest`); HTML + vanilla JS with no build; ComfyUI + Z-Image Turbo; the Canva connector (MCP) in Claude Code.
 
-**Spec:** `studio/DESIGN.md` (затверджено 2026-11-20). Виконавці читають обидва файли.
+**Spec:** `studio/DESIGN.md` (approved 2026-11-20). Implementers read both files.
 
-**Команда тестів (усі задачі):**
+**Test command (all tasks):**
 `cd /Users/volost/GitRepos/canva/studio && /Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python -I -m unittest discover -s tests -t . -v`
-(далі — `RUN_TESTS`; для одного файлу додати `-p test_<name>.py`).
+(hereafter `RUN_TESTS`; for a single file add `-p test_<name>.py`).
 
-**Git:** проєкт не є репозиторієм. Кроки «Commit» виконуються лише якщо власник дозволив `git init` у
-`studio/` (локально, без push, без `Co-Authored-By`); інакше крок пропускається.
+**Git:** the project is not a repository. The "Commit" steps are performed only if the owner allowed `git init` in
+`studio/` (local, no push, no `Co-Authored-By`); otherwise the step is skipped.
 
 ## Global Constraints
 
-- Ніколи не редагувати `DAHarqlqips` (куплений Ivory Lace) і дизайн скелета; Canva-завдання дозволені лише
-  на копію, створену для цього шаблону (DESIGN §5.7.3).
-- Один записувач на дизайн: не більше одного Canva-завдання (`apply_canva`, `verify`) у `running/` або
-  `pending/` одночасно (DESIGN §5.2, §5.7.5).
-- Студія нічого не видаляє: «ще раз» додає нову генерацію, старі файли лишаються; відхилені — позначка в
-  стані, не видалення. Ніякої публікації сайту, надсилання форми, зміни налаштувань акаунта.
-- Сервер слухає лише `127.0.0.1`; лише стандартна бібліотека + PIL/numpy/scipy середовища ComfyUI; нічого не
-  встановлювати.
-- Python: `/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python`, запуск з `-I`.
-- Моделі: `/Volumes/WoofData/ComfyUI/models`; ComfyUI: `/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/main.py`,
+- Never edit `DAHarqlqips` (the purchased Ivory Lace) or the skeleton design; Canva jobs are allowed only
+  on the copy created for this template (DESIGN §5.7.3).
+- One writer per design: no more than one Canva job (`apply_canva`, `verify`) in `running/` or
+  `pending/` at a time (DESIGN §5.2, §5.7.5).
+- The studio deletes nothing: «ще раз» ("again") adds a new generation, the old files stay; rejected ones are a mark in the
+  state, not a deletion. No publishing of the site, submitting a form, or changing account settings.
+- The server listens only on `127.0.0.1`; only the standard library + PIL/numpy/scipy of the ComfyUI environment; nothing is
+  installed.
+- Python: `/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python`, launched with `-I`.
+- Models: `/Volumes/WoofData/ComfyUI/models`; ComfyUI: `/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/main.py`,
   `--listen 127.0.0.1 --port 8188 --disable-auto-launch --disable-all-custom-nodes --extra-model-paths-config
   /Users/volost/GitRepos/canva/pilot/comfy/extra_model_paths.yaml`.
-- Граф Z-Image Turbo: KSampler 8 кроків, cfg 1, `res_multistep`, `simple`; ModelSamplingAuraFlow shift 3;
-  CLIPLoader type `lumina2`; негатив — ConditioningZeroOut (як у `pilot/tools/comfy_generate.py`).
-- Кожна фінальна картинка має пропорцію своєї рамки з точністю 0,5 %; прозорий декор — доповнений
-  (padded), фото — обрізані по центру.
-- Після кожного `update_fill` — `crop_media` до точного cover-кадру.
-- Кожна перевірка має контроль: навмисно поганий вхід мусить бути відхилений тією ж функцією; інакше
-  перевірка вважається зламаною і прогін падає.
-- Мова шаблонів — англійська. Шрифти не змінюються конектором: студія видає чекліст ручної заміни.
-- Персональні дані — лише живий текст і лише в слотах з `personal: true`; правила `SPEC.md` §7.
-- Інтерфейс студії — українською.
+- The Z-Image Turbo graph: KSampler 8 steps, cfg 1, `res_multistep`, `simple`; ModelSamplingAuraFlow shift 3;
+  CLIPLoader type `lumina2`; negative — ConditioningZeroOut (as in `pilot/tools/comfy_generate.py`).
+- Every final picture has the aspect ratio of its frame within 0.5 %; transparent decor is padded,
+  photos are cropped around the centre.
+- After every `update_fill` — `crop_media` to the exact cover frame.
+- Every check has a control: a deliberately bad input must be rejected by the same function; otherwise the
+  check is considered broken and the run fails.
+- The templates' language is English. Fonts are not changed by the connector: the studio issues a checklist for the manual swap.
+- Personal data — live text only and only in slots with `personal: true`; the rules of `SPEC.md` §7.
+- The studio interface is in Ukrainian.
 
 ## Review Focus
 
-1. ComfyUI не запущено або диск `WoofData` не змонтовано, а власник тисне «Генерувати» → зрозуміле
-   повідомлення в інтерфейсі за ≤ 5 с, без зависання (тест у Task 5).
-2. Власник повертається і змінює вже затверджений крок → усі наступні кроки стають `stale`, і завдання
-   `apply_canva` з застарілими даними не створюється (тест у Task 2 і Task 3).
-3. Подвійне натискання «Записати в Canva» → друге Canva-завдання відхилено (тест у Task 3).
-4. Тексти з `’ “ ” é & < >` і переносом рядка → зберігаються й передаються в завдання без змін, інтерфейс
-   показує їх без HTML-ін'єкції (тест у Task 9 і Task 10).
-5. Пошкоджений або напівзаписаний JSON у скриньці чи в результаті завдання → студія показує завдання як
-   «пошкоджене», не падає (тест у Task 3).
+1. ComfyUI is not running or the `WoofData` disk is not mounted, and the owner presses «Генерувати» ("Generate") → a clear
+   message in the interface within ≤ 5 s, no hang (test in Task 5).
+2. The owner comes back and changes an already approved step → all following steps become `stale`, and an `apply_canva`
+   job with stale data is not created (test in Task 2 and Task 3).
+3. Double press of «Записати в Canva» ("Write to Canva") → the second Canva job is rejected (test in Task 3).
+4. Texts with `’ “ ” é & < >` and a line break → stored and passed into the job unchanged, the interface
+   shows them without HTML injection (test in Task 9 and Task 10).
+5. Corrupted or half-written JSON in the inbox or in a job result → the studio shows the job as
+   "corrupt" and does not crash (test in Task 3).
 
 ---
 
-## Структура файлів
+## File structure
 
 ```
 studio/
   DESIGN.md  PLAN.md
-  config.json                  шляхи, порти, заборонені id
-  run.sh                       запуск для власника (ComfyUI + студія)
+  config.json                  paths, ports, forbidden ids
+  run.sh                       launcher for the owner (ComfyUI + studio)
   app/
     config.py                  Config, load_config
-    store.py                   шаблони/скелети на диску, атомарний запис JSON
-    steps.py                   стани кроків, затвердження, stale
-    guard.py                   захист оригіналів
-    jobs.py                    скринька завдань, замок Canva, зависання
-    schema.py                  перевірка map.json / style.json / texts.json
-    texts.py                   попередження про довжину
-    comfy.py                   клієнт ComfyUI
-    genqueue.py                послідовна черга генерацій у фоні
+    store.py                   templates/skeletons on disk, atomic JSON write
+    steps.py                   step states, approval, stale
+    guard.py                   protection of the originals
+    jobs.py                    job inbox, Canva lock, stuck jobs
+    schema.py                  validation of map.json / style.json / texts.json
+    texts.py                   length warnings
+    comfy.py                   ComfyUI client
+    genqueue.py                sequential background generation queue
     imaging/
       core.py                  aspect_error, cover_crop, pad_to_frame, alpha_coverage, checker, on_background
       cutout.py                watercolour_to_alpha, solid_cutout
-      envelope.py              compose_envelope, check_envelope (геометрія з map.json)
+      envelope.py              compose_envelope, check_envelope (geometry from map.json)
       sheet.py                 contact_sheet
-    assets.py                  план генерацій по ассетах, постобробка, перевірка, маніфест
-    server.py                  HTTP: статика + JSON API
+    assets.py                  generation plan per asset, post-processing, checking, manifest
+    server.py                  HTTP: static files + JSON API
     static/ index.html app.js style.css
-  canva/                       скрипти для Claude-сесії (узагальнені з Sage & Linen)
-    facts.py outline.py probe_diff.py layout.py   (копії, без жорстких id)
-    ops.py                     операції з map + style + texts
+  canva/                       scripts for the Claude session (generalised from Sage & Linen)
+    facts.py outline.py probe_diff.py layout.py   (copies, no hard-coded ids)
+    ops.py                     operations from map + style + texts
     protected.py final_check.py fields.py geometry.py
   tests/  test_*.py, fixtures/
   skeletons/<skeleton>/  templates/<template>/  jobs/{pending,running,done,failed}/
 /Users/volost/GitRepos/canva/.claude/skills/studio/SKILL.md + jobs/*.md
 ```
 
-## Формати даних (спільні для всіх задач)
+## Data formats (shared by all tasks)
 
 - `skeletons/<s>/map.json`:
   `{"skeleton": str, "design_id": str, "pages": [{"index": int, "id": str, "title": str}],
@@ -112,18 +114,18 @@ studio/
   "image_prompts": {<asset>: str}, "fonts": {"heading": str, "body": str, "script": str}, "font_map": {<text role>: "heading"|"body"|"script"}}`
 - `templates/<t>/texts.json`: `{<locator>: str}`.
 - `templates/<t>/state.json`: `{"skeleton": str, "canva_copy_id": str|null, "chosen": {<asset>: <file>}, "steps": {<step>: {"status": str, "updated_utc": str}}}`;
-  кроки `STEPS = ("style", "images", "texts", "apply", "verify")`; статуси `draft`, `waiting_claude`, `review`, `approved`, `stale`.
-- Завдання `jobs/<state>/<id>.json`: `{"id", "type", "template"|null, "skeleton", "target_design_id"|null,
-  "created_utc", "inputs": {...}, "limits": [str]}`; типи `map_skeleton`, `style_directions`, `write_texts`,
-  `apply_canva`, `verify`; Canva-типи — `apply_canva`, `verify` (і `map_skeleton`, що лише читає).
-- Результат `templates/<t>/jobs/<id>.result.json` (для `map_skeleton` — `skeletons/<s>/jobs/`):
+  steps `STEPS = ("style", "images", "texts", "apply", "verify")`; statuses `draft`, `waiting_claude`, `review`, `approved`, `stale`.
+- Job `jobs/<state>/<id>.json`: `{"id", "type", "template"|null, "skeleton", "target_design_id"|null,
+  "created_utc", "inputs": {...}, "limits": [str]}`; types `map_skeleton`, `style_directions`, `write_texts`,
+  `apply_canva`, `verify`; Canva types — `apply_canva`, `verify` (and `map_skeleton`, which only reads).
+- Result `templates/<t>/jobs/<id>.result.json` (for `map_skeleton` — `skeletons/<s>/jobs/`):
   `{"status": "done"|"failed", "summary": str, "outputs": {...}, "checks": [{"name": str, "passed": bool, "detail": str}]}`.
 
 ---
 
-### Task 1: Каркас, конфіг і запуск
+### Task 1: Skeleton, config and launcher
 
-**Who:** Sonnet, medium — чітко описаний каркас, мало суджень.
+**Who:** Sonnet, medium — a clearly described skeleton, little judgement.
 
 **Files:** Create `studio/config.json`, `studio/app/__init__.py`, `studio/app/config.py`, `studio/app/server.py`,
 `studio/app/static/index.html`, `studio/run.sh`, `studio/tests/__init__.py`, `studio/tests/test_config.py`, `studio/tests/test_server.py`.
@@ -134,49 +136,49 @@ studio/
   `load_config(path: Path) -> Config`; `make_server(cfg: Config, port: int) -> ThreadingHTTPServer`;
   `GET /api/health -> {"ok": true, "comfy_url": str, "models_mounted": bool}`.
 
-- [ ] **Step 1: Write the failing tests** — `test_load_config_reads_values` (з `tests/fixtures/config.json`:
+- [ ] **Step 1: Write the failing tests** — `test_load_config_reads_values` (from `tests/fixtures/config.json`:
   `forbidden_design_ids == {"DAHarqlqips"}`, `studio_port == 8765`); `test_load_config_rejects_missing_key`
-  (`ValueError` з назвою ключа); `test_health_endpoint` (сервер на порту 0 у потоці, `GET /api/health` →
-  200, `ok is True`, `models_mounted` — bool); `test_server_binds_localhost_only` (`server_address[0] == "127.0.0.1"`).
-- [ ] **Step 2:** `RUN_TESTS -p "test_c*.py"` і `-p "test_server.py"` → FAIL (модулів немає).
-- [ ] **Step 3:** Реалізувати `load_config`, `make_server` (обробник на `BaseHTTPRequestHandler`, статика з
-  `app/static`, JSON-відповіді з `Content-Type: application/json; charset=utf-8`). `config.json` — значення з
+  (`ValueError` naming the key); `test_health_endpoint` (a server on port 0 in a thread, `GET /api/health` →
+  200, `ok is True`, `models_mounted` is a bool); `test_server_binds_localhost_only` (`server_address[0] == "127.0.0.1"`).
+- [ ] **Step 2:** `RUN_TESTS -p "test_c*.py"` and `-p "test_server.py"` → FAIL (no modules).
+- [ ] **Step 3:** Implement `load_config`, `make_server` (a handler on `BaseHTTPRequestHandler`, static files from
+  `app/static`, JSON responses with `Content-Type: application/json; charset=utf-8`). `config.json` — the values from
   Global Constraints, `studio_port` 8765, `forbidden_design_ids` `["DAHarqlqips"]`.
-- [ ] **Step 4:** `run.sh`: перевіряє, що `/Volumes/WoofData/ComfyUI/models` існує (інакше повідомлення і
-  вихід 1); якщо `curl -s 127.0.0.1:8188` не відповідає — стартує ComfyUI у фоні з лог-файлом
-  `studio/logs/comfy.log`; стартує студію; друкує `Студія: http://127.0.0.1:8765` і `ComfyUI: http://127.0.0.1:8188`.
-- [ ] **Step 5:** `RUN_TESTS` → PASS. Ручна перевірка не потрібна (сервер поза пісочницею запускає власник).
+- [ ] **Step 4:** `run.sh`: checks that `/Volumes/WoofData/ComfyUI/models` exists (otherwise a message and
+  exit 1); if `curl -s 127.0.0.1:8188` does not answer — starts ComfyUI in the background with the log file
+  `studio/logs/comfy.log`; starts the studio; prints `Студія: http://127.0.0.1:8765` ("Studio: ...") and `ComfyUI: http://127.0.0.1:8188`.
+- [ ] **Step 5:** `RUN_TESTS` → PASS. No manual check needed (the owner starts the server outside the sandbox).
 - [ ] **Step 6: Commit** `feat(studio): skeleton, config, launcher`.
 
-### Task 2: Сховище і стани кроків
+### Task 2: Store and step states
 
-**Who:** Sonnet, medium — логіка стану, чіткі правила.
+**Who:** Sonnet, medium — state logic, clear rules.
 
 **Files:** Create `app/store.py`, `app/steps.py`, `tests/test_store.py`, `tests/test_steps.py`.
 
 **Interfaces:**
 - Consumes: `Config` (Task 1).
-- Produces: `write_json_atomic(path: Path, data) -> None` (тимчасовий файл + `os.replace`);
-  `read_json(path: Path) -> dict` (кидає `CorruptJSON(path)` на поганий JSON);
+- Produces: `write_json_atomic(path: Path, data) -> None` (a temporary file + `os.replace`);
+  `read_json(path: Path) -> dict` (raises `CorruptJSON(path)` on bad JSON);
   `create_template(cfg, name: str, skeleton: str) -> Path`; `list_templates(cfg) -> list[str]`;
   `template_dir(cfg, name) -> Path`; `skeleton_dir(cfg, name) -> Path`;
   `STEPS`, `set_status(state: dict, step: str, status: str) -> dict`; `approve(state, step) -> dict`;
-  `reopen(state, step) -> dict` (крок → `review`, усі наступні `approved`/`review` → `stale`);
-  `can_start(state, step) -> bool` (усі попередні `approved`).
+  `reopen(state, step) -> dict` (the step → `review`, all following `approved`/`review` → `stale`);
+  `can_start(state, step) -> bool` (all previous are `approved`).
 
 - [ ] **Step 1: Write the failing tests** — `test_atomic_write_roundtrip`; `test_read_corrupt_raises`
-  (файл `{"a":` → `CorruptJSON`); `test_create_template_rejects_bad_name` (`"../x"`, `""`, `"a/b"` → `ValueError`;
-  дозволено `[a-z0-9-]{1,40}`); `test_create_template_existing_raises`; `test_reopen_marks_later_stale`
-  (усі approved, `reopen(state,"images")` → images `review`, texts/apply/verify `stale`, style `approved`);
-  `test_can_start_requires_previous_approved` (`can_start(s,"apply")` False, поки texts `stale`).
+  (the file `{"a":` → `CorruptJSON`); `test_create_template_rejects_bad_name` (`"../x"`, `""`, `"a/b"` → `ValueError`;
+  allowed `[a-z0-9-]{1,40}`); `test_create_template_existing_raises`; `test_reopen_marks_later_stale`
+  (all approved, `reopen(state,"images")` → images `review`, texts/apply/verify `stale`, style `approved`);
+  `test_can_start_requires_previous_approved` (`can_start(s,"apply")` False while texts is `stale`).
 - [ ] **Step 2:** `RUN_TESTS -p "test_st*.py"` → FAIL.
-- [ ] **Step 3:** Реалізувати; `updated_utc` — `datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")`.
+- [ ] **Step 3:** Implement; `updated_utc` — `datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")`.
 - [ ] **Step 4:** `RUN_TESTS` → PASS.
 - [ ] **Step 5: Commit** `feat(studio): template store and step states`.
 
-### Task 3: Скринька завдань і захист оригіналів
+### Task 3: Job inbox and protection of the originals
 
-**Who:** Sonnet, high — тут живуть анти-цілі (запис в оригінал, два записувачі); помилка дорога.
+**Who:** Sonnet, high — the anti-goals live here (a write to the original, two writers); a mistake is costly.
 
 **Files:** Create `app/guard.py`, `app/jobs.py`, `tests/test_guard.py`, `tests/test_jobs.py`.
 
@@ -184,29 +186,29 @@ studio/
 - Consumes: `Config`, `store.*`, `steps.can_start` (Tasks 1–2).
 - Produces: `GuardError(Exception)`; `check_job(job: dict, cfg: Config, skeleton_design_id: str, state: dict|None) -> None`;
   `CANVA_WRITE_TYPES = {"apply_canva", "verify"}`; `create_job(cfg, type: str, skeleton: str, template: str|None,
-  inputs: dict, target_design_id: str|None) -> dict`; `list_jobs(cfg) -> list[dict]` (кожен з `state` ∈
+  inputs: dict, target_design_id: str|None) -> dict`; `list_jobs(cfg) -> list[dict]` (each with `state` ∈
   `pending|running|done|failed|corrupt`, `age_s`); `canva_busy(cfg) -> bool`; `read_result(cfg, job) -> dict|None`.
 
 - [ ] **Step 1: Write the failing tests** — `test_guard_blocks_purchased_original` (`target_design_id="DAHarqlqips"` → `GuardError`);
-  `test_guard_blocks_skeleton_id`; `test_guard_verify_requires_template_copy` (verify з target ≠
-  `state["canva_copy_id"]` → `GuardError`); `test_guard_apply_first_run_target_none_ok` (apply з `target None`
-  і `canva_copy_id None` — дозволено: копію створить Claude); `test_guard_apply_stale_texts_refused`
-  (`can_start(state,"apply")` False → `GuardError`); `test_second_canva_job_refused` (два `create_job("apply_canva")`
-  поспіль → другий `GuardError`, у `pending/` один файл); `test_corrupt_job_listed_not_raised` (сміття в
-  `pending/x.json` → `list_jobs` повертає `state == "corrupt"`); `test_job_limits_present` (кожне Canva-завдання
-  має в `limits` рядки з DESIGN §5.2).
+  `test_guard_blocks_skeleton_id`; `test_guard_verify_requires_template_copy` (verify with target ≠
+  `state["canva_copy_id"]` → `GuardError`); `test_guard_apply_first_run_target_none_ok` (apply with `target None`
+  and `canva_copy_id None` — allowed: Claude will create the copy); `test_guard_apply_stale_texts_refused`
+  (`can_start(state,"apply")` False → `GuardError`); `test_second_canva_job_refused` (two `create_job("apply_canva")`
+  in a row → the second `GuardError`, one file in `pending/`); `test_corrupt_job_listed_not_raised` (garbage in
+  `pending/x.json` → `list_jobs` returns `state == "corrupt"`); `test_job_limits_present` (every Canva job
+  has strings in `limits` from DESIGN §5.2).
 - [ ] **Step 2:** `RUN_TESTS -p "test_guard.py"`, `-p "test_jobs.py"` → FAIL.
-- [ ] **Step 3:** Реалізувати; id завдання `YYYYmmddTHHMMSSZ-<type>`; `canva_busy` — є Canva-завдання в
-  `pending/` або `running/`; `create_job` викликає `check_job` до запису; запис — `write_json_atomic`.
+- [ ] **Step 3:** Implement; job id `YYYYmmddTHHMMSSZ-<type>`; `canva_busy` — there is a Canva job in
+  `pending/` or `running/`; `create_job` calls `check_job` before writing; the write is `write_json_atomic`.
 - [ ] **Step 4:** `RUN_TESTS` → PASS.
 - [ ] **Step 5: Commit** `feat(studio): job inbox with original-design guard`.
 
-### Task 4: Бібліотека обробки картинок
+### Task 4: Image-processing library
 
-**Who:** Sonnet, medium — перенесення перевіреного коду з тестами.
+**Who:** Sonnet, medium — porting verified code with tests.
 
 **Files:** Create `app/imaging/__init__.py`, `core.py`, `cutout.py`, `sheet.py`, `tests/test_imaging.py`.
-Джерела: `study/sage-linen/tools/lib.py` (функції з тими ж назвами), `cutout_watercolour.py`,
+Sources: `study/sage-linen/tools/lib.py` (functions with the same names), `cutout_watercolour.py`,
 `cutout_solid.py`, `contact_sheet.py`, `pilot/tools/white_to_alpha.py`.
 
 **Interfaces:**
@@ -215,62 +217,62 @@ studio/
   `alpha_coverage(img) -> float`; `watercolour_to_alpha(img, speck=80) -> Image`;
   `solid_cutout(img, tol=14, holes=None, erode=2, feather=1.0) -> Image`;
   `contact_sheet(items: list[tuple[str, Path]], out: Path, long_edge=1568) -> Path`.
-  Без глобальних шляхів (`ROOT`, `ASSETS`) — усе через параметри.
+  No global paths (`ROOT`, `ASSETS`) — everything through parameters.
 
-- [ ] **Step 1: Write the failing tests** — `test_cover_crop_exact_aspect` (1000×700 у рамку 433×600 →
-  `aspect_error < 0.005`); `test_pad_keeps_alpha` (результат RGBA, кути прозорі); `test_watercolour_white_becomes_transparent`
-  (біле тло → alpha 0, пляма кольору → alpha > 0); `test_solid_cutout_keeps_highlight_opaque` (біле коло
-  всередині темного кільця не прозоре без `holes`); `test_contact_sheet_long_edge` (≤ 1568).
-- [ ] **Step 2:** FAIL. **Step 3:** перенести функції. **Step 4:** PASS.
+- [ ] **Step 1: Write the failing tests** — `test_cover_crop_exact_aspect` (1000×700 into a 433×600 frame →
+  `aspect_error < 0.005`); `test_pad_keeps_alpha` (the result is RGBA, corners transparent); `test_watercolour_white_becomes_transparent`
+  (white background → alpha 0, a colour blot → alpha > 0); `test_solid_cutout_keeps_highlight_opaque` (a white circle
+  inside a dark ring is not transparent without `holes`); `test_contact_sheet_long_edge` (≤ 1568).
+- [ ] **Step 2:** FAIL. **Step 3:** port the functions. **Step 4:** PASS.
 - [ ] **Step 5: Commit** `feat(studio): imaging library`.
 
-### Task 5: Клієнт ComfyUI і черга генерацій
+### Task 5: ComfyUI client and generation queue
 
 **Who:** Sonnet, medium.
 
 **Files:** Create `app/comfy.py`, `app/genqueue.py`, `tests/test_comfy.py`, `tests/test_genqueue.py`.
-Джерело графа: `pilot/tools/comfy_generate.py`.
+Graph source: `pilot/tools/comfy_generate.py`.
 
 **Interfaces:**
 - Consumes: `Config`.
 - Produces: `ComfyError(Exception)`; `build_graph(prompt: str, width: int, height: int, seed: int, prefix: str) -> dict`;
   `ping(cfg, timeout=3.0) -> bool`; `generate(cfg, prompt, width, height, seed, prefix, out_dir: Path, timeout=1500) -> list[Path]`;
-  `GenQueue(cfg, log_path: Path)` з `submit(job: dict) -> str`, `status() -> list[dict]` (`queued|running|done|failed`,
-  `error`, `seconds`), один робочий потік; кожен запуск — рядок у `generations.jsonl`
+  `GenQueue(cfg, log_path: Path)` with `submit(job: dict) -> str`, `status() -> list[dict]` (`queued|running|done|failed`,
+  `error`, `seconds`), one worker thread; every run is a line in `generations.jsonl`
   (`utc, prefix, seed, width, height, exit, saved, seconds, prompt`).
 
-- [ ] **Step 1: Write the failing tests** — `test_build_graph_settings` (у графі steps 8, cfg 1, sampler
-  `res_multistep`, scheduler `simple`, shift 3, CLIP type `lumina2`, розміри й seed передані);
-  `test_ping_closed_port_fast` (URL на вільний порт → `False` менш ніж за 5 с);
-  `test_queue_reports_comfy_down` (черга з недоступним ComfyUI → завдання `failed`, `error` містить
-  «ComfyUI недоступний», рядок у jsonl з `exit != 0`); `test_queue_sequential` (підмінений `generate`
-  фіксує, що два завдання не перетинаються в часі).
-- [ ] **Step 2:** FAIL. **Step 3:** реалізувати (`urllib.request`; `/prompt`, `/history/<id>`, `/view`).
+- [ ] **Step 1: Write the failing tests** — `test_build_graph_settings` (the graph has steps 8, cfg 1, sampler
+  `res_multistep`, scheduler `simple`, shift 3, CLIP type `lumina2`, sizes and seed passed through);
+  `test_ping_closed_port_fast` (a URL on a free port → `False` in under 5 s);
+  `test_queue_reports_comfy_down` (a queue with an unavailable ComfyUI → the job `failed`, `error` contains
+  «ComfyUI недоступний» ("ComfyUI unavailable"), a line in jsonl with `exit != 0`); `test_queue_sequential` (a substituted `generate`
+  records that two jobs do not overlap in time).
+- [ ] **Step 2:** FAIL. **Step 3:** implement (`urllib.request`; `/prompt`, `/history/<id>`, `/view`).
 - [ ] **Step 4:** PASS.
 - [ ] **Step 5: Commit** `feat(studio): ComfyUI client and generation queue`.
 
-### Task 6: Конверт за геометрією з карти
+### Task 6: Envelope from the map's geometry
 
-**Who:** Sonnet, high — геометрія, яку модель не вгадає; є готова перевірка.
+**Who:** Sonnet, high — geometry the model will not guess; a ready-made check exists.
 
-**Files:** Create `app/imaging/envelope.py`, `tests/test_envelope.py`. Джерела: `study/sage-linen/tools/compose_envelope.py`,
+**Files:** Create `app/imaging/envelope.py`, `tests/test_envelope.py`. Sources: `study/sage-linen/tools/compose_envelope.py`,
 `check_assets.py:check_envelope`.
 
 **Interfaces:**
-- Consumes: `imaging.core`; блок `envelope` з `map.json`.
+- Consumes: `imaging.core`; the `envelope` block from `map.json`.
 - Produces: `compose_envelope(texture: Image, geom: dict, scale=2, seal: Image|None=None) -> tuple[Image, Image, Image]`
-  (cover, flap, body); `check_envelope(cover, flap, body, geom, scale=2) -> list[str]` (порожній = добре).
-  Константи `TIP`, `SEAL_CENTRE` тощо — з `geom`, не з коду.
+  (cover, flap, body); `check_envelope(cover, flap, body, geom, scale=2) -> list[str]` (empty = good).
+  Constants `TIP`, `SEAL_CENTRE` etc. — from `geom`, not from code.
 
-- [ ] **Step 1: Write the failing tests** — `test_envelope_layers_reproduce_cover` (геометрія Sage & Linen:
+- [ ] **Step 1: Write the failing tests** — `test_envelope_layers_reproduce_cover` (Sage & Linen geometry:
   section 1366×964, tip (683,610), left_top (0,60), right_top (1366,60), seal_centre (683,623),
-  seal_size (160,198), seal_rot_canva −3.4; рівномірна текстура → `check_envelope == []`);
-  `test_envelope_no_transparent_pixel` (flap над body — альфа 255 скрізь);
-  `test_check_rejects_shifted_flap` (зсув flap на 6 px → непорожній список — контроль).
-- [ ] **Step 2:** FAIL. **Step 3:** перенести, параметризувати геометрією. **Step 4:** PASS.
+  seal_size (160,198), seal_rot_canva −3.4; a uniform texture → `check_envelope == []`);
+  `test_envelope_no_transparent_pixel` (flap over body — alpha 255 everywhere);
+  `test_check_rejects_shifted_flap` (shifting the flap by 6 px → a non-empty list — the control).
+- [ ] **Step 2:** FAIL. **Step 3:** port, parameterise with the geometry. **Step 4:** PASS.
 - [ ] **Step 5: Commit** `feat(studio): envelope from skeleton geometry`.
 
-### Task 7: Схеми даних і тексти
+### Task 7: Data schemas and texts
 
 **Who:** Sonnet, medium.
 
@@ -279,178 +281,178 @@ studio/
 
 **Interfaces:**
 - Produces: `validate_map(d: dict) -> list[str]`; `validate_style(d: dict, m: dict) -> list[str]`
-  (кожен ассет із `m["assets"]` має промпт; кожна роль кольору є в палітрі; кольори `#rrggbb`);
-  `validate_texts(d: dict, m: dict) -> list[str]` (лише локатори текстових слотів);
-  `length_warnings(texts: dict, m: dict) -> dict[str, str]` (одиничний рядок довший за `max_len`;
-  абзац довший за 115 % `original`); `font_checklist(m: dict, style: dict) -> list[dict]`
+  (every asset from `m["assets"]` has a prompt; every colour role is in the palette; colours are `#rrggbb`);
+  `validate_texts(d: dict, m: dict) -> list[str]` (only the locators of text slots);
+  `length_warnings(texts: dict, m: dict) -> dict[str, str]` (a single line longer than `max_len`;
+  a paragraph longer than 115 % of `original`); `font_checklist(m: dict, style: dict) -> list[dict]`
   (`locator, role, font`).
 
 - [ ] **Step 1: Write the failing tests** — `test_map_min_valid`; `test_map_rejects_slot_without_locator`;
   `test_map_rejects_image_slot_with_unknown_asset`; `test_style_requires_prompt_per_asset`;
-  `test_texts_unknown_locator_rejected`; `test_length_warning_one_line` (`max_len` 20, 25 символів → попередження);
-  `test_unicode_text_preserved` (`"We’re “so” happy — Café & <b>\nline"` проходить `validate_texts` і
-  записується/читається через `store` байт у байт); `test_font_checklist_lists_every_text_role`.
-- [ ] **Step 2:** FAIL. **Step 3:** реалізувати. **Step 4:** PASS.
+  `test_texts_unknown_locator_rejected`; `test_length_warning_one_line` (`max_len` 20, 25 characters → a warning);
+  `test_unicode_text_preserved` (`"We’re “so” happy — Café & <b>\nline"` passes `validate_texts` and
+  is written/read through `store` byte for byte); `test_font_checklist_lists_every_text_role`.
+- [ ] **Step 2:** FAIL. **Step 3:** implement. **Step 4:** PASS.
 - [ ] **Step 5: Commit** `feat(studio): data schemas, length warnings, font checklist`.
 
-### Task 8: Конвеєр ассетів
+### Task 8: Asset pipeline
 
-**Who:** Sonnet, high — з'єднує карту, генерацію, обробку і перевірки; від нього залежить якість картинок.
+**Who:** Sonnet, high — joins the map, generation, processing and checks; the quality of the pictures depends on it.
 
 **Files:** Create `app/assets.py`, `tests/test_assets.py`.
 
 **Interfaces:**
 - Consumes: `comfy`, `genqueue`, `imaging.*`, `schema` (Tasks 4–7).
-- Produces: `gen_size(frame: tuple[int,int], megapixels=1.5) -> tuple[int,int]` (кратні 64, пропорція рамки
-  ±3 % — точну дає постобробка); `plan_generations(m: dict, style: dict) -> list[dict]` (на ассет:
-  `asset, prompt, width, height, kind`; `composed` → генерується лише текстура, решта — `compose_envelope`);
+- Produces: `gen_size(frame: tuple[int,int], megapixels=1.5) -> tuple[int,int]` (multiples of 64, the frame's aspect
+  ±3 % — the exact one comes from post-processing); `plan_generations(m: dict, style: dict) -> list[dict]` (per asset:
+  `asset, prompt, width, height, kind`; `composed` → only the texture is generated, the rest is `compose_envelope`);
   `postprocess(asset: str, src: Path, m: dict, out_dir: Path) -> Path` (photo/texture → `cover_crop`;
   watercolour → `watercolour_to_alpha` + `pad_to_frame`; solid → `solid_cutout` + `pad_to_frame`);
   `check_asset(path: Path, spec: dict) -> list[str]`; `check_all(template_dir: Path, m: dict) -> dict`
-  (на файл — список проблем, плюс `controls_ok: bool` з навмисно поганих файлів);
-  `build_manifest(template_dir: Path, m: dict) -> Path`. Файли версіонуються: `assets/<asset>__v<n>.<ext>`,
-  обраний — у `state.json` (`"chosen": {<asset>: <file>}`); попередні версії не видаляються.
+  (per file a list of problems, plus `controls_ok: bool` from deliberately bad files);
+  `build_manifest(template_dir: Path, m: dict) -> Path`. Files are versioned: `assets/<asset>__v<n>.<ext>`,
+  the chosen one is in `state.json` (`"chosen": {<asset>: <file>}`); previous versions are not deleted.
 
 - [ ] **Step 1: Write the failing tests** — `test_gen_size_multiple_of_64_and_close_aspect`
-  (рамка 433×600); `test_plan_has_every_asset`; `test_postprocess_photo_exact_aspect`;
+  (a 433×600 frame); `test_plan_has_every_asset`; `test_postprocess_photo_exact_aspect`;
   `test_postprocess_watercolour_transparent`; `test_check_all_controls_reject_bad`
-  (неправильна пропорція, непрозорий «прозорий» файл, файл, що не відкривається → кожен відхилено;
-  `controls_ok True`); `test_regenerate_keeps_previous_version` (v1 лишається після v2).
-- [ ] **Step 2:** FAIL. **Step 3:** реалізувати. **Step 4:** PASS.
+  (a wrong aspect ratio, an opaque "transparent" file, a file that does not open → each rejected;
+  `controls_ok True`); `test_regenerate_keeps_previous_version` (v1 stays after v2).
+- [ ] **Step 2:** FAIL. **Step 3:** implement. **Step 4:** PASS.
 - [ ] **Step 5: Commit** `feat(studio): asset pipeline with checks and versions`.
 
-### Task 9: JSON API студії
+### Task 9: The studio's JSON API
 
 **Who:** Sonnet, medium.
 
 **Files:** Modify `app/server.py`; Create `tests/test_api.py`.
 
 **Interfaces:**
-- Consumes: усе з Tasks 2–8.
-- Produces (усі відповіді JSON; помилки — `{"error": str}` з 400/409/500, без трасування):
-  `GET /api/skeletons`, `POST /api/skeletons {name, design_id}` → створює завдання `map_skeleton`;
+- Consumes: everything from Tasks 2–8.
+- Produces (all responses JSON; errors — `{"error": str}` with 400/409/500, no traceback):
+  `GET /api/skeletons`, `POST /api/skeletons {name, design_id}` → creates a `map_skeleton` job;
   `GET /api/skeletons/<s>`, `PUT /api/skeletons/<s>/roles {locator: role}`;
-  `GET /api/templates`, `POST /api/templates {name, skeleton, brief}` → завдання `style_directions`;
+  `GET /api/templates`, `POST /api/templates {name, skeleton, brief}` → a `style_directions` job;
   `GET /api/templates/<t>` (state, style, texts, warnings, assets, jobs);
   `PUT /api/templates/<t>/style`, `POST /api/templates/<t>/images/generate {assets?: [..], prompt_override?}`,
   `POST /api/templates/<t>/images/choose {asset, file}`, `POST /api/templates/<t>/texts/request` → `write_texts`,
   `PUT /api/templates/<t>/texts`, `POST /api/templates/<t>/approve {step}`, `POST /api/templates/<t>/reopen {step}`,
   `POST /api/templates/<t>/apply` → `apply_canva`, `POST /api/templates/<t>/verify` → `verify`;
-  `GET /api/jobs`, `GET /api/gen`; `GET /files/<path>` — лише всередині `skeletons/` і `templates/`.
+  `GET /api/jobs`, `GET /api/gen`; `GET /files/<path>` — only inside `skeletons/` and `templates/`.
 
-- [ ] **Step 1: Write the failing tests** — `test_create_template_flow` (POST template → 200, у `pending/` завдання
-  `style_directions`); `test_apply_twice_conflict` (друге `apply` → 409); `test_apply_refused_when_texts_stale` → 409;
-  `test_files_path_traversal_blocked` (`/files/../config.json` і `/files/%2e%2e/config.json` → 404);
-  `test_bad_json_body_400`; `test_unicode_texts_roundtrip` (рядок з Task 7 через PUT/GET без змін).
-- [ ] **Step 2:** FAIL. **Step 3:** реалізувати маршрути. **Step 4:** PASS.
+- [ ] **Step 1: Write the failing tests** — `test_create_template_flow` (POST template → 200, a `style_directions`
+  job in `pending/`); `test_apply_twice_conflict` (the second `apply` → 409); `test_apply_refused_when_texts_stale` → 409;
+  `test_files_path_traversal_blocked` (`/files/../config.json` and `/files/%2e%2e/config.json` → 404);
+  `test_bad_json_body_400`; `test_unicode_texts_roundtrip` (the string from Task 7 through PUT/GET unchanged).
+- [ ] **Step 2:** FAIL. **Step 3:** implement the routes. **Step 4:** PASS.
 - [ ] **Step 5: Commit** `feat(studio): JSON API`.
 
-### Task 10: Інтерфейс
+### Task 10: Interface
 
-**Who:** Sonnet, high — UI; перевіряється у браузері вимірюванням, не на око.
+**Who:** Sonnet, high — UI; verified in the browser by measurement, not by eye.
 
 **Files:** Create/Modify `app/static/index.html`, `app/static/app.js`, `app/static/style.css`.
 
-**Interfaces:** Consumes the API of Task 9. Екрани (DESIGN §5.1): список шаблонів і скелетів; карта скелета з
-мініатюрами і редагуванням ролей; бриф і вибір напряму стилю; галерея картинок (прийняти / ще раз / своя
-підказка; аркуш-огляд; статус черги й ComfyUI); тексти з попередженнями; «Записати в Canva» з поясненням
-«виконайте `/studio` у сесії Claude Code»; результат перевірки (сторінки, таблиця перевірок, посилання на
-дизайн, чекліст шрифтів і ручних кроків). Смуга кроків угорі зі статусами. Стан завдань оновлюється
-опитуванням `GET /api/jobs` кожні 3 с. Увесь текст користувача вставляється через `textContent`, не `innerHTML`.
+**Interfaces:** Consumes the API of Task 9. Screens (DESIGN §5.1): a list of templates and skeletons; the skeleton map with
+thumbnails and role editing; the brief and the choice of a style direction; the picture gallery (accept / again / own
+prompt; overview sheet; queue and ComfyUI status); texts with warnings; «Записати в Canva» ("Write to Canva") with the explanation
+"run `/studio` in the Claude Code session"; the check result (pages, a table of checks, a link to the
+design, a checklist of fonts and manual steps). A step strip on top with statuses. The job state is refreshed
+by polling `GET /api/jobs` every 3 s. All user text is inserted through `textContent`, not `innerHTML`.
 
-- [ ] **Step 1:** Запустити студію з тестовими даними (`tests/fixtures/`) поза пісочницею; відкрити у
-  вбудованому браузері `http://127.0.0.1:8765`.
-- [ ] **Step 2: Перевірка списком елементів** — для кожного екрана з переліку вище: елемент є в DOM
-  (`read_page`), видимий, кнопки досяжні (`getBoundingClientRect` у межах вікна при 1440×900 і 768×1024),
-  немає горизонтальної прокрутки.
-- [ ] **Step 3: Перевірка ін'єкції** — текст `<img src=x onerror=alert(1)>` у полі тексту показується як текст
+- [ ] **Step 1:** Start the studio with test data (`tests/fixtures/`) outside the sandbox; open in the
+  embedded browser `http://127.0.0.1:8765`.
+- [ ] **Step 2: Check by element list** — for each screen in the list above: the element is in the DOM
+  (`read_page`), visible, the buttons are reachable (`getBoundingClientRect` within the window at 1440×900 and 768×1024),
+  no horizontal scrolling.
+- [ ] **Step 3: Injection check** — the text `<img src=x onerror=alert(1)>` in a text field is shown as text
   (`document.querySelectorAll('img[src="x"]').length === 0`).
-- [ ] **Step 4:** Помилка ComfyUI (Review Focus 1) показується повідомленням на екрані картинок.
+- [ ] **Step 4:** A ComfyUI error (Review Focus 1) is shown as a message on the pictures screen.
 - [ ] **Step 5: Commit** `feat(studio): web interface`.
 
-### Task 11: Скрипти для Canva-сесії
+### Task 11: Scripts for the Canva session
 
-**Who:** Sonnet, high — узагальнення скриптів, що захищали дизайн 12.11; помилка = зіпсований дизайн.
+**Who:** Sonnet, high — generalising the scripts that protected the design on 12.11; a mistake = a damaged design.
 
-**Files:** Create `studio/canva/{facts,outline,probe_diff,layout}.py` (копії з `study/sage-linen/canva/` і
-`handoff/tools/`, без жорстких id), `studio/canva/ops.py`, `protected.py`, `final_check.py`, `fields.py`,
+**Files:** Create `studio/canva/{facts,outline,probe_diff,layout}.py` (copies from `study/sage-linen/canva/` and
+`handoff/tools/`, with no hard-coded ids), `studio/canva/ops.py`, `protected.py`, `final_check.py`, `fields.py`,
 `geometry.py`, `tests/test_canva_ops.py`, `tests/test_canva_checks.py`, `tests/fixtures/facts_sage.json`
-(копія `study/sage-linen/canva/facts_final.json`), `tests/fixtures/facts_orig.json` (копія `facts0.json`).
+(a copy of `study/sage-linen/canva/facts_final.json`), `tests/fixtures/facts_orig.json` (a copy of `facts0.json`).
 
 **Interfaces:**
-- Produces: `cover_box(frame_w, frame_h, img_w, img_h) -> dict(left, top, width, height)` (точний cover, центр);
-  `build_ops(m: dict, style: dict, texts: dict, facts: dict) -> dict[str, list[dict]]` (пакети по сторінках:
-  `replace_text`, `format_text` колір, `recolor_element`/`update_fill` для кольорів; ніколи не торкається
-  `m["protected"]`); `verify_batch(before: dict, after: dict, ops: list) -> list[str]` (неціловані зміни
-  мусять бути відсутні); `protected_changes(orig: dict, now: dict, m: dict) -> list[str]`;
-  `final_check(orig: dict, now: dict, m: dict, texts: dict) -> list[dict]` (на кожну перевірку `name, passed, detail`,
-  плюс контроль: на `orig` перевірки мусять падати); `build_fields(m: dict, texts: dict) -> dict` і
+- Produces: `cover_box(frame_w, frame_h, img_w, img_h) -> dict(left, top, width, height)` (exact cover, centred);
+  `build_ops(m: dict, style: dict, texts: dict, facts: dict) -> dict[str, list[dict]]` (batches per page:
+  `replace_text`, `format_text` colour, `recolor_element`/`update_fill` for colours; never touches
+  `m["protected"]`); `verify_batch(before: dict, after: dict, ops: list) -> list[str]` (untargeted changes
+  must be absent); `protected_changes(orig: dict, now: dict, m: dict) -> list[str]`;
+  `final_check(orig: dict, now: dict, m: dict, texts: dict) -> list[dict]` (per check `name, passed, detail`,
+  plus a control: on `orig` the checks must fail); `build_fields(m: dict, texts: dict) -> dict` and
   `page_notes(m: dict) -> dict[str, str]`.
-  CLI кожного скрипта: `python -I <script>.py <args>` друкує підсумок, повний вивід — у файл.
+  The CLI of each script: `python -I <script>.py <args>` prints a summary, the full output goes to a file.
 
-- [ ] **Step 1: Write the failing tests** — `test_cover_box_centred_exact` (рамка 433×600, картинка 866×1300 →
-  ширина 433, висота 650, top −25); `test_build_ops_never_touches_protected`; `test_build_ops_text_uses_replace_text`;
-  `test_verify_batch_flags_untargeted_change`; `test_protected_change_detected` (синтетична зміна media id →
-  знайдено — контроль); `test_final_check_fails_on_original` (на `facts_orig` перевірки падають);
+- [ ] **Step 1: Write the failing tests** — `test_cover_box_centred_exact` (a 433×600 frame, a 866×1300 picture →
+  width 433, height 650, top −25); `test_build_ops_never_touches_protected`; `test_build_ops_text_uses_replace_text`;
+  `test_verify_batch_flags_untargeted_change`; `test_protected_change_detected` (a synthetic change of a media id →
+  found — the control); `test_final_check_fails_on_original` (on `facts_orig` the checks fail);
   `test_fields_cover_every_personal_slot`.
-- [ ] **Step 2:** FAIL. **Step 3:** реалізувати/перенести. **Step 4:** PASS.
+- [ ] **Step 2:** FAIL. **Step 3:** implement/port. **Step 4:** PASS.
 - [ ] **Step 5: Commit** `feat(studio): Canva-side scripts`.
 
-### Task 12: Skill `/studio` та інструкції завдань
+### Task 12: The `/studio` skill and the job instructions
 
-**Who:** Opus, high після оновлення ліміту (до 22.11 — Sonnet, high) — суджень багато: правила конектора,
-межі, що робити при невдачі; помилка псує дизайн або витрачає ліміт.
+**Who:** Opus, high after the limit refresh (until 22.11 — Sonnet, high) — much judgement: the connector's rules,
+limits, what to do on failure; a mistake damages the design or burns the limit.
 
 **Files:** Create `/Users/volost/GitRepos/canva/.claude/skills/studio/SKILL.md`, `.../jobs/map_skeleton.md`,
-`style_directions.md`, `write_texts.md`, `apply_canva.md`, `verify.md`. Запис у `.claude/skills` пісочниця
-блокує — потрібен дозвіл власника на цей запис.
+`style_directions.md`, `write_texts.md`, `apply_canva.md`, `verify.md`. Writing to `.claude/skills` is blocked by the sandbox —
+the owner's permission is needed for this write.
 
 **Interfaces:**
-- Consumes: формати даних (вище), скрипти Task 11, `PLAYBOOK.md` §4–7, `SPEC.md` §7.
-- Produces: SKILL.md: (1) спершу `jobs/running/` (DESIGN §5.7.5); (2) найстаріше `pending/` → `running/`;
-  (3) перевірка цілі: id ≠ `DAHarqlqips`, ≠ id скелета, для verify = `canva_copy_id`; (4) інструкція типу
-  з `jobs/<type>.md`; (5) результат у `<id>.result.json` за форматом; (6) `done/` або `failed/`.
-  Кожна інструкція: що прочитати, кроки, жорсткі межі DESIGN §5.2, формат `outputs` і `checks`.
-  `apply_canva`: `copy-design` скелета → записати `canva_copy_id` у `state.json` → кольори і тексти пакетами з
-  `verify_batch` після кожного → завантаження картинок (`create-upload-url` + `curl`) → `update_fill` +
-  `crop_media(cover_box)` → стрес-тест довгими значеннями з `SPEC.md` §7.4 і відновлення з diff →
-  нотатки сторінок → `fields.json` → `protected_changes == []`. `verify`: експорт PNG, нарізка, контраст під
-  білим текстом, перегляд у повноекранному прев'ю (телефон і 1440×810), аудит кнопок 9/9 (JS з PLAYBOOK §5
-  Phase 7), чекліст шрифтів і ручних кроків.
+- Consumes: the data formats (above), the Task 11 scripts, `PLAYBOOK.md` §4–7, `SPEC.md` §7.
+- Produces: SKILL.md: (1) first `jobs/running/` (DESIGN §5.7.5); (2) the oldest `pending/` → `running/`;
+  (3) target check: id ≠ `DAHarqlqips`, ≠ the skeleton's id, for verify = `canva_copy_id`; (4) the type's instruction
+  from `jobs/<type>.md`; (5) the result in `<id>.result.json` in the format; (6) `done/` or `failed/`.
+  Each instruction: what to read, steps, the hard limits of DESIGN §5.2, the format of `outputs` and `checks`.
+  `apply_canva`: `copy-design` of the skeleton → write `canva_copy_id` into `state.json` → colours and texts in batches with
+  `verify_batch` after each → upload the pictures (`create-upload-url` + `curl`) → `update_fill` +
+  `crop_media(cover_box)` → a stress test with the long values of `SPEC.md` §7.4 and restoration from the diff →
+  page notes → `fields.json` → `protected_changes == []`. `verify`: PNG export, slicing, contrast under
+  white text, a view in the fullscreen preview (phone and 1440×810), the button audit 9/9 (the JS from PLAYBOOK §5
+  Phase 7), the checklist of fonts and manual steps.
 
-- [ ] **Step 1:** Написати SKILL.md та п'ять інструкцій.
-- [ ] **Step 2: Сухий прогін** — завдання `write_texts` для тестового шаблону з `tests/fixtures/`: `/studio`
-  бере його, пише `texts.json` і результат, переносить у `done/`; студія показує тексти.
-- [ ] **Step 3: Перевірка захисту** — підкласти в `pending/` вручну зроблене завдання `verify` з
-  `target_design_id: "DAHarqlqips"` → skill відмовляє, завдання в `failed/` з причиною, жодного виклику Canva.
+- [ ] **Step 1:** Write SKILL.md and the five instructions.
+- [ ] **Step 2: Dry run** — a `write_texts` job for a test template from `tests/fixtures/`: `/studio`
+  takes it, writes `texts.json` and the result, moves it to `done/`; the studio shows the texts.
+- [ ] **Step 3: Protection check** — put into `pending/` a hand-made `verify` job with
+  `target_design_id: "DAHarqlqips"` → the skill refuses, the job goes to `failed/` with a reason, not a single Canva call.
 - [ ] **Step 4: Commit** `feat(studio): /studio skill and job instructions`.
 
-### Task 13: Наскрізний прогін на тестовій копії
+### Task 13: End-to-end run on a test copy
 
-**Who:** провідна сесія (Opus після оновлення ліміту) разом із власником — потрібні Canva, браузер, рішення власника.
+**Who:** the lead session (Opus after the limit refresh) together with the owner — Canva, the browser, the owner's decisions are needed.
 
-**Files:** `studio/skeletons/probe/`, `studio/templates/<перший-стиль>/`, звіт `studio/templates/<t>/RUN_NOTES.md`.
+**Files:** `studio/skeletons/probe/`, `studio/templates/<first-style>/`, the report `studio/templates/<t>/RUN_NOTES.md`.
 
-- [ ] **Step 1:** Власник запускає `studio/run.sh`; студія і ComfyUI відповідають (адреси в звіті).
-- [ ] **Step 2:** Скелет `probe` = `DAHason1g_M`; `/studio` виконує `map_skeleton`; власник виправляє ролі.
-- [ ] **Step 3:** Шаблон: бриф → `style_directions` → вибір → картинки (усі прийняті) → `write_texts` → правки → затвердження.
-- [ ] **Step 4:** «Записати» → `/studio` виконує `apply_canva` на новій копії; `protected_changes == []`.
-- [ ] **Step 5:** «Перевірити» → `/studio` виконує `verify`; усі перевірки пройдені з числами; аудит кнопок 9/9.
-- [ ] **Step 6:** Записати в звіт: час кожного кроку, витрату ліміту (`get_usage` до і після), що не вдалося.
+- [ ] **Step 1:** The owner runs `studio/run.sh`; the studio and ComfyUI respond (the addresses go in the report).
+- [ ] **Step 2:** The skeleton `probe` = `DAHason1g_M`; `/studio` executes `map_skeleton`; the owner corrects the roles.
+- [ ] **Step 3:** Template: brief → `style_directions` → choice → pictures (all accepted) → `write_texts` → edits → approval.
+- [ ] **Step 4:** «Записати» ("Write") → `/studio` executes `apply_canva` on a new copy; `protected_changes == []`.
+- [ ] **Step 5:** «Перевірити» ("Check") → `/studio` executes `verify`; all checks passed with numbers; the button audit 9/9.
+- [ ] **Step 6:** Record in the report: the time of each step, the limit spent (`get_usage` before and after), what failed.
 
-### Task 14: Специфікація власного скелета для власника
+### Task 14: Specification of the own skeleton for the owner
 
-**Who:** провідна сесія, Sonnet medium до 22.11 — документ на основі `study/ivory-lace/BLUEPRINT.md` і вимог DESIGN §5.6.
-Незалежна від Tasks 1–13, можна робити будь-коли.
+**Who:** the lead session, Sonnet medium until 22.11 — a document based on `study/ivory-lace/BLUEPRINT.md` and the requirements of DESIGN §5.6.
+Independent of Tasks 1–13, can be done at any time.
 
 **Files:** Create `studio/SKELETON_SPEC.md`.
 
-- [ ] **Step 1:** Описати для власника, українською, покроково в редакторі Canva: сторінки і секції, ширина
-  колонки для телефона, рамки під картинки з розмірами, текстові поля (окреме поле на кожне персональне
-  значення), конверт із двох шарів, кнопки з посиланням на верхньому елементі, форма, вбудовані блоки,
-  без тексту в картинках.
-- [ ] **Step 2:** Перевірити кожну назву меню в редакторі Canva (англійський інтерфейс власника) через
-  вбудований браузер; що не перевірено — позначити.
-- [ ] **Step 3:** Віддати власнику на читання.
+- [ ] **Step 1:** Describe for the owner, in Ukrainian, step by step in the Canva editor: pages and sections, the
+  column width for the phone, frames for pictures with sizes, text fields (a separate field for each personal
+  value), the two-layer envelope, buttons with the link on the top element, the form, embedded blocks,
+  no text in pictures.
+- [ ] **Step 2:** Verify every menu name in the Canva editor (the owner's English interface) through the
+  embedded browser; mark whatever is not verified.
+- [ ] **Step 3:** Give it to the owner to read.
 
-Не входить у план (DESIGN §4): кнопка фонового запуску `claude -p` — окремо, після тесту.
+Not part of the plan (DESIGN §4): the background-launch button `claude -p` — separately, after the test.
