@@ -20,8 +20,12 @@ executes them with the scripts from `studio/canva/`.
 
 **Spec:** `studio/DESIGN.md` (approved 2026-11-20). Implementers read both files.
 
+> Handover note (2026-11-21): this plan is kept as approved. Machine paths that it once named are now keys of the local
+> `config.json` (template `config.example.json`); the skill lives in `.claude/skills/test-canva-studio/` (it was planned as
+> `studio`); the reference notes it cites are copied into `docs/reference/`.
+
 **Test command (all tasks):**
-`cd /Users/volost/GitRepos/canva/studio && /Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python -I -m unittest discover -s tests -t . -v`
+`cd <repo root> && <python from config.json> -I -m unittest discover -s tests -t . -v`
 (hereafter `RUN_TESTS`; for a single file add `-p test_<name>.py`).
 
 **Git:** the project is not a repository. The "Commit" steps are performed only if the owner allowed `git init` in
@@ -37,12 +41,12 @@ executes them with the scripts from `studio/canva/`.
   state, not a deletion. No publishing of the site, submitting a form, or changing account settings.
 - The server listens only on `127.0.0.1`; only the standard library + PIL/numpy/scipy of the ComfyUI environment; nothing is
   installed.
-- Python: `/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python`, launched with `-I`.
-- Models: `/Volumes/WoofData/ComfyUI/models`; ComfyUI: `/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/main.py`,
+- Python: the ComfyUI venv Python (`config.json` key `python`), launched with `-I`.
+- Models: `config.json` key `models_dir`; ComfyUI: key `comfy_main`,
   `--listen 127.0.0.1 --port 8188 --disable-auto-launch --disable-all-custom-nodes --extra-model-paths-config
-  /Users/volost/GitRepos/canva/pilot/comfy/extra_model_paths.yaml`.
+  <config.json key extra_model_paths; template config/extra_model_paths.example.yaml>`.
 - The Z-Image Turbo graph: KSampler 8 steps, cfg 1, `res_multistep`, `simple`; ModelSamplingAuraFlow shift 3;
-  CLIPLoader type `lumina2`; negative — ConditioningZeroOut (as in `pilot/tools/comfy_generate.py`).
+  CLIPLoader type `lumina2`; negative — ConditioningZeroOut (as in the pilot script `pilot/tools/comfy_generate.py`, outside this repo).
 - Every final picture has the aspect ratio of its frame within 0.5 %; transparent decor is padded,
   photos are cropped around the centre.
 - After every `update_fill` — `crop_media` to the exact cover frame.
@@ -97,7 +101,7 @@ studio/
     protected.py final_check.py fields.py geometry.py
   tests/  test_*.py, fixtures/
   skeletons/<skeleton>/  templates/<template>/  jobs/{pending,running,done,failed}/
-/Users/volost/GitRepos/canva/.claude/skills/studio/SKILL.md + jobs/*.md
+skills: .claude/skills/test-canva-studio/SKILL.md + jobs/*.md   (planned as skills/studio/)
 ```
 
 ## Data formats (shared by all tasks)
@@ -144,7 +148,7 @@ studio/
 - [ ] **Step 3:** Implement `load_config`, `make_server` (a handler on `BaseHTTPRequestHandler`, static files from
   `app/static`, JSON responses with `Content-Type: application/json; charset=utf-8`). `config.json` — the values from
   Global Constraints, `studio_port` 8765, `forbidden_design_ids` `["DAHarqlqips"]`.
-- [ ] **Step 4:** `run.sh`: checks that `/Volumes/WoofData/ComfyUI/models` exists (otherwise a message and
+- [ ] **Step 4:** `run.sh`: checks that the `models_dir` folder from `config.json` exists (otherwise a message and
   exit 1); if `curl -s 127.0.0.1:8188` does not answer — starts ComfyUI in the background with the log file
   `studio/logs/comfy.log`; starts the studio; prints `Студія: http://127.0.0.1:8765` ("Studio: ...") and `ComfyUI: http://127.0.0.1:8188`.
 - [ ] **Step 5:** `RUN_TESTS` → PASS. No manual check needed (the owner starts the server outside the sandbox).
@@ -403,7 +407,7 @@ by polling `GET /api/jobs` every 3 s. All user text is inserted through `textCon
 **Who:** Opus, high after the limit refresh (until 22.11 — Sonnet, high) — much judgement: the connector's rules,
 limits, what to do on failure; a mistake damages the design or burns the limit.
 
-**Files:** Create `/Users/volost/GitRepos/canva/.claude/skills/studio/SKILL.md`, `.../jobs/map_skeleton.md`,
+**Files:** Create `.claude/skills/test-canva-studio/SKILL.md` (planned as `skills/studio/`), `.../jobs/map_skeleton.md`,
 `style_directions.md`, `write_texts.md`, `apply_canva.md`, `verify.md`. Writing to `.claude/skills` is blocked by the sandbox —
 the owner's permission is needed for this write.
 
@@ -442,7 +446,7 @@ the owner's permission is needed for this write.
 
 ### Task 14: Specification of the own skeleton for the owner
 
-**Who:** the lead session, Sonnet medium until 22.11 — a document based on `study/ivory-lace/BLUEPRINT.md` and the requirements of DESIGN §5.6.
+**Who:** the lead session, Sonnet medium until 22.11 — a document based on `docs/reference/BLUEPRINT.md` and the requirements of DESIGN §5.6.
 Independent of Tasks 1–13, can be done at any time.
 
 **Files:** Create `studio/SKELETON_SPEC.md`.

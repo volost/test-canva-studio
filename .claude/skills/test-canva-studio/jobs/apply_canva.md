@@ -39,8 +39,8 @@ COPY ONLY. There is nothing else to ask the owner before the risky steps below.
    (paths relative to `ROOT`), `chosen` ({asset: file}), `texts` ({locator: text}); `target_design_id` is null on the
    first run (copy not yet made) or the copy's id on a re-run.
 2. The files those paths name, plus `BASE/state.json`.
-3. PLAYBOOK §4 (connector behaviour) and §5 Phases 4-6 (`/Users/volost/GitRepos/canva/handoff/PLAYBOOK.md`); SPEC §7
-   (`/Users/volost/GitRepos/canva/study/sage-linen/SPEC.md`): configurability rules and the §7.4 stress test.
+3. PLAYBOOK §4 (connector behaviour) and §5 Phases 4-6 (`docs/reference/PLAYBOOK.md`); SPEC §7
+   (`docs/reference/SPEC.md`): configurability rules and the §7.4 stress test.
 4. The Python scripts' own `--help` text is their module docstring: run a script with no arguments to print it.
 
 Connector facts that matter here (PLAYBOOK §4): `update_fill` leaves the picture box ~11 px too big, so every fill is
@@ -51,7 +51,7 @@ connector cannot choose fonts; pages with sections have no thumbnails (commit, e
 ## Conventions in this instruction
 
 - Every Bash command starts with the variables (shell state does not persist):
-  `ROOT=<studio root>; CODE=/Users/volost/GitRepos/canva/studio; PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; T=<template>; S=<skeleton>; ID=<job id>; BASE="$ROOT/templates/$T"; W="$BASE/work/$ID"`.
+  `ROOT=<studio root>; CODE=<code folder from SKILL.md §0>; PY=<python path from SKILL.md §0>; T=<template>; S=<skeleton>; ID=<job id>; BASE="$ROOT/templates/$T"; W="$BASE/work/$ID"`.
   `$W/...` below always means a file in this job's work folder. `D` is the copy's design id (after step 2).
 
 - A "call" = one `edit-design` call. Operation files `*.json` written by `ops.py` hold
@@ -156,7 +156,7 @@ cd "$CODE" && $PY -I canva/protected.py "$ROOT/skeletons/$S/map.json" "$BASE/fac
    `replace_text` / colour operation; the verification still uses the real facts.
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$ROOT" "$T" "$ROOT/skeletons/$S/map.json" "$W/facts_cur.json" "$BASE/facts_orig.json" "$W/facts_for_build.json" "$W/overwritten_hand_edits.json" <<'PYEOF'
 # snippet: reset_texts
 import copy
@@ -243,7 +243,7 @@ Missing → check `calendar_marker` failed ("write_texts result has no calendar_
 The marker element is the map's colour slot with role `calendar_marker`.
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$CODE" "$ROOT/skeletons/$S/map.json" "$BASE/facts_orig.json" "$W/facts_cur.json" "<marker locator>" "<cell locator>" "$W/marker_01.json" <<'PYEOF'
 # snippet: marker
 import json
@@ -340,7 +340,7 @@ Commit first (steps 5-6), so the design on the server is the clean state. Then:
 1. Plan the uploads from the chosen files; the snippet refuses a file whose sha256 differs from the manifest:
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$BASE" "$ROOT/skeletons/$S/map.json" "$W/upload_plan.json" <<'PYEOF'
 # snippet: upload_plan
 import hashlib
@@ -393,7 +393,7 @@ PYEOF
 3. `uploads.json` for the scripts:
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$W/upload_plan.json" "$W/uploads.json" <<'PYEOF'
 # snippet: uploads_json
 import json

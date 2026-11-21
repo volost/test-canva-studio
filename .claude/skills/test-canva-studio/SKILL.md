@@ -19,14 +19,23 @@ Language: this file and the job instructions are English. Everything the owner r
 
 Argument of this invocation (may be empty): `$ARGUMENTS`
 
-- `ROOT` = the studio root = that argument if it is not empty, else `/Users/volost/GitRepos/canva/studio`.
+- `CODE` = the repository root — where `app/`, `canva/` and `docs/` (the scripts and the reference notes) live.
+  This skill lives at `<repo>/.claude/skills/test-canva-studio/`, so it is loaded only by a session opened in the
+  repository root, whose working directory is therefore the repository. Find `CODE` ONCE, first thing, with
+  `git rev-parse --show-toplevel` (equivalently `git -C "<SKILL_DIR>" rev-parse --show-toplevel`; use the second form if
+  the working directory is somewhere else), and check that `CODE/app/guard.py` and `CODE/.claude/skills/test-canva-studio/SKILL.md`
+  exist; otherwise tell the owner and stop. Nothing in this skill hard-codes a machine path: the same files work on every machine.
+  Relative paths in the job instructions (`docs/reference/PLAYBOOK.md`, `DESIGN.md`, `app/...`, `canva/...`) are relative to `CODE`.
+- `ROOT` = the studio root (the folder with `jobs/`, `templates/`, `skeletons/` and its own `config.json`) = the argument
+  if it is not empty, else `CODE`.
   Every data path below (`jobs/`, `templates/`, `skeletons/`, `config.json`) is relative to `ROOT`.
   Before anything else check that `ROOT/config.json` and `ROOT/jobs/pending` exist; otherwise tell the owner
-  and stop (touch nothing).
-- `CODE` = `/Users/volost/GitRepos/canva/studio` — where `app/` and `canva/` (the scripts) live.
-- `PY` = `/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python` (equals `config.json` key `python`).
-  Always run Python as `$PY -I`. Shell state does not persist between Bash calls: put
-  `ROOT=...; CODE=...; PY=...` at the start of every Bash command that uses them. Scripts are run from `CODE`
+  and stop (touch nothing). (`ROOT/config.json` is the machine-local file a developer creates from `config.example.json`.)
+- `PY` = the `python` key of `ROOT/config.json` (the ComfyUI virtualenv's Python, which has PIL and numpy). Read it once with
+  the system Python (stdlib only): `python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["python"])' "$ROOT/config.json"`,
+  and check that the file it names exists and is executable. Always run Python as `$PY -I`.
+  Shell state does not persist between Bash calls: put `ROOT=...; CODE=...; PY=...` (the literal values found above)
+  at the start of every Bash command that uses them. Scripts are run from `CODE`
   (`cd "$CODE" && $PY -I canva/ops.py ...`); data files are given by absolute path under `ROOT`.
 - `SKILL_DIR` = the folder of this SKILL.md; the job instructions are `SKILL_DIR/jobs/<type>.md`.
 - `BASE` = `ROOT/templates/<template>` for template jobs, `ROOT/skeletons/<skeleton>` for `map_skeleton`.
@@ -119,7 +128,7 @@ skeleton's recorded id, earlier template steps not all `approved`, the job's own
 `inputs.chosen` differ from `texts.json` / `state.json`. It reuses the studio's own `app.guard.check_job`.
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$CODE" "$ROOT" "$ROOT/jobs/running/$ID.json" <<'PYEOF'
 # snippet: precheck
 import dataclasses
@@ -281,7 +290,7 @@ with a clear message): then write `BASE/jobs/<job id>.refused.note.txt` (Ukraini
 existing result's `status`.
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$CODE" "$ROOT" "$ROOT/jobs/running/$ID.json" "$BASE/work/$ID/result.draft.json" <<'PYEOF'
 # snippet: write_result
 import dataclasses
@@ -387,7 +396,7 @@ Run each exactly as written, replacing only the angle-bracket arguments. Do not 
 never combine it with other work). It changes only `canva_copy_id`, and refuses a protected or skeleton id.
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$CODE" "$ROOT" "<template>" "<new design id>" <<'PYEOF'
 # snippet: set_copy_id
 import dataclasses
@@ -419,7 +428,7 @@ PYEOF
 **Turn a `final_check.py` / similar report into result checks** (`PASS name: detail` lines → checks JSON):
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "<report.txt>" "<checks.json>" <<'PYEOF'
 # snippet: to_checks
 import json
@@ -442,7 +451,7 @@ PYEOF
 untouched original; protected elements may keep theirs):
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$CODE" "<map.json>" "<facts_orig.json>" "<facts_now.json>" <<'PYEOF'
 # snippet: old_media
 import json
@@ -491,7 +500,7 @@ PYEOF
 **Cut an exported page into slices** (at most 1400 px high and 1568 px wide, safe to look at):
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "<page.png>" "<out folder>" <<'PYEOF'
 # snippet: slice
 import sys
@@ -517,7 +526,7 @@ slot exists with the right element type, `original` equals the design's text, no
 every text is a slot / protected / `keep`, the map's pages are the design's pages:
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$CODE" "<map.json>" "<facts.json>" <<'PYEOF'
 # snippet: map_check
 import json
@@ -565,7 +574,7 @@ ONLY the declared sizes reset and prints the check `font_size_changes` (passed i
 exactly the declared locators; control: with an empty declared list any changed size fails):
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "<facts_orig.json>" "<facts_final.json>" "<declared.json>" "<facts_adjusted.json>" <<'PYEOF'
 # snippet: adjust_sizes
 import copy

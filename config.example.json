@@ -1,0 +1,10 @@
+{
+  "root": "/EXAMPLE/absolute/path/to/studio",
+  "python": "/EXAMPLE/absolute/path/to/ComfyUI/.venv/bin/python",
+  "comfy_main": "/EXAMPLE/absolute/path/to/ComfyUI/main.py",
+  "models_dir": "/EXAMPLE/absolute/path/to/ComfyUI/models",
+  "extra_model_paths": "/EXAMPLE/absolute/path/to/studio/config/extra_model_paths.yaml",
+  "comfy_url": "http://127.0.0.1:8188",
+  "studio_port": 8765,
+  "forbidden_design_ids": ["DAHarqlqips"]
+}

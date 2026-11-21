@@ -1,4 +1,4 @@
-"""The /test-canva-studio skill files (studio/skill/test-canva-studio): structure checks on the markdown, and a run of the shipped
+"""The /test-canva-studio skill files (.claude/skills/test-canva-studio): structure checks on the markdown, and a run of the shipped
 snippets (the precheck that refuses the purchased original, the result writer, the copy-id writer, the map and
 media checks) against temporary data. Standard library only; no network; no Canva."""
 import dataclasses
@@ -16,7 +16,8 @@ from app.guard import JOB_TYPES
 from app.store import create_template, read_json, write_json_atomic
 
 ROOT = Path(__file__).resolve().parent.parent
-SKILL = ROOT / "skill" / "test-canva-studio"
+# The skill lives inside the repository so that a Claude Code session opened in the repo root loads it with no copy step.
+SKILL = ROOT / ".claude" / "skills" / "test-canva-studio"
 FX = Path(__file__).parent / "fixtures"
 ORIGINAL = "DAHarqlqips"
 FILES = ["SKILL.md"] + [f"jobs/{t}.md" for t in ("map_skeleton", "style_directions", "write_texts", "apply_canva", "verify")]
@@ -64,6 +65,20 @@ class StructureTests(unittest.TestCase):
     def test_all_six_files_exist(self):
         for rel in FILES:
             self.assertTrue((SKILL / rel).is_file(), rel)
+
+    def test_skill_is_portable_no_machine_paths(self):
+        """The skill must work on any machine: no absolute home or volume path, and the reference notes it points to
+        are the copies inside the repository (docs/reference/), which must exist."""
+        machine = re.compile(r"/Users/[A-Za-z0-9._-]+|/Volumes/|/home/[A-Za-z0-9._-]+")
+        for rel in FILES:
+            self.assertEqual(machine.findall(read(rel)), [], rel)
+        self.assertEqual(machine.findall("see /Users/someone/x"), ["/Users/someone"])          # control: the check can fail
+        refs = set()
+        for rel in FILES:
+            refs.update(re.findall(r"docs/reference/[\w.-]+", read(rel)))
+        self.assertTrue(refs, "the skill should point at docs/reference/*")
+        for ref in refs:
+            self.assertTrue((ROOT / ref).is_file(), ref)
 
     def test_job_instruction_files_match_job_types_exactly(self):
         stems = {p.stem for p in (SKILL / "jobs").glob("*.md")}

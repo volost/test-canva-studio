@@ -3,8 +3,13 @@
 Note: The command was renamed to /test-canva-studio on 2026-11-20 (owner's decision).
 
 Status: approved by the owner on 2026-11-20 («Затверджую», "I approve").
-Basis: conversation with the owner on 2026-11-20; verified facts — `handoff/PLAYBOOK.md` §4–5 (the 12.11 run),
-`study/sage-linen/SPEC.md` §7, the project memory.
+Basis: conversation with the owner on 2026-11-20; verified facts — `docs/reference/PLAYBOOK.md` §4–5 (the 12.11 run),
+`docs/reference/SPEC.md` §7, the project memory.
+
+> Handover note (2026-11-21): this document is the approved design and is kept as written. Where it names the command `/studio`, the
+> real name is `/test-canva-studio` (skill in `.claude/skills/test-canva-studio/`, inside this repo). Reference notes that it cites from
+> outside the repo are copied into `docs/reference/` (see its README). Machine paths are not in git any more: they live in the
+> local `config.json` (template: `config.example.json`).
 
 ## 1. Why
 
@@ -112,7 +117,7 @@ marked as stale.
   section exports.
 - `studio/templates/<template>/` — the brief, the chosen direction (`style.json`), `assets/` + manifest + overview sheet,
   `texts.json`, the id of the copy in Canva, step results, `fields.json`, notes of each job.
-  The layout follows the model of `study/sage-linen/`.
+  The layout follows the model of the Sage & Linen study (`docs/reference/SPEC.md`; the study folder itself is not in this repo).
 - The skeleton map is the only place where element ids live; the rest of the code does not depend on a specific skeleton.
 
 ### 5.4 Technical
@@ -156,9 +161,8 @@ My proposal; the owner will get a separate skeleton specification before assembl
    template; all later Canva jobs are allowed only on that id. The studio refuses to create a job if the
    target is the skeleton's id or `DAHarqlqips`; the skill checks the same once more before opening a transaction.
    A test copy for experiments — only if needed, one per skeleton.
-4. **One process under the ComfyUI Python** (`/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python`,
-   verified 2026-11-20: PIL 12.3.0, numpy 2.5.2). The paths (ComfyUI, models at `/Volumes/WoofData/ComfyUI/models`,
-   port) are in one studio config file. The launch script checks that the disk is mounted.
+4. **One process under the ComfyUI Python** (the `python` key of `config.json`; on the owner's machine verified
+   2026-11-20: PIL 12.3.0, numpy 2.5.2). The paths (ComfyUI, models folder, ports) are in one studio config file, `config.json`. The launch script checks that the disk is mounted.
 5. **A job stuck in `running/`.** The studio shows the start time; while a Canva job is in `running/`,
    a new Canva job is not created. At start, `/studio` first looks in `running/`: reads the notes and the
    current state of the design, continues or marks `failed` with a reason — as in PLAYBOOK §6 on restarts.

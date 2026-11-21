@@ -1,0 +1,16 @@
+# EXAMPLE. Copy this file to config/extra_model_paths.yaml (git-ignored, local to your machine), put the real folder
+# in base_path, and point the "extra_model_paths" key of config.json at your copy (absolute path).
+# run.sh passes that file to ComfyUI as --extra-model-paths-config, so a headless ComfyUI finds the model files
+# without copying them. base_path must be the ComfyUI "models" folder that contains the sub-folders below; it can be
+# on an external disk (then run.sh stops with a message while the disk is not mounted).
+# The studio needs three files inside it (names fixed in app/comfy.py build_graph):
+#   diffusion_models/z_image_turbo_bf16.safetensors, text_encoders/qwen_3_4b.safetensors, vae/ae.safetensors
+# The section name ("studio_models") is only a label.
+studio_models:
+  base_path: /EXAMPLE/absolute/path/to/ComfyUI/models
+  diffusion_models: diffusion_models/
+  text_encoders: text_encoders/
+  vae: vae/
+  loras: loras/
+  upscale_models: upscale_models/
+  background_removal: background_removal/

@@ -38,10 +38,10 @@ what this job is for; `DAHarqlqips` (the purchased original) is never read here 
 ## What you read first (completely)
 
 1. The job file and `BASE/skeleton.json`.
-2. DESIGN §5.3, §5.6, §5.7.1 (`/Users/volost/GitRepos/canva/studio/DESIGN.md`) and PLAYBOOK §4 Structure
-   (`/Users/volost/GitRepos/canva/handoff/PLAYBOOK.md`); `app/schema.py` `validate_map` (the exact map shape).
+2. DESIGN §5.3, §5.6, §5.7.1 (`DESIGN.md` in the code folder) and PLAYBOOK §4 Structure
+   (`docs/reference/PLAYBOOK.md`); `app/schema.py` `validate_map` (the exact map shape).
 3. SPEC §7.2 (the list of places where personal data may stand) in
-   `/Users/volost/GitRepos/canva/study/sage-linen/SPEC.md`.
+   `docs/reference/SPEC.md`.
 
 ## Steps
 
@@ -70,7 +70,7 @@ skeleton's id; exporting does not change it). Download only those URLs:
 (the studio shows `skeletons/<s>/sections/<page id>.png`; the snippet never overwrites an existing file — then keep it):
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$W/export/page_<i>.png" "$BASE/sections/<page id>.png" <<'PYEOF'
 # snippet: thumbs
 import sys
@@ -95,7 +95,7 @@ what each section is (cover, hero, story, venue, timeline, ...), where pictures,
 ### 3. Draft the map from the facts, then complete it
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$W/facts.json" "$W/outline.txt" "$S" "<design id>" "$W/map_draft.json" <<'PYEOF'
 # snippet: draft_map
 import ast
@@ -242,7 +242,7 @@ An existing `map.json` (the owner may already have corrected roles in the studio
 snippet validates and writes atomically:
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$CODE" "$ROOT" "$S" "$W/map_draft.json" <<'PYEOF'
 # snippet: store_map
 import dataclasses

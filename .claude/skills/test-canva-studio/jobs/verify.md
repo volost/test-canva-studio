@@ -42,7 +42,7 @@ looks wrong) goes into the result and `manual_steps`; fixing it is a new apply j
 2. `BASE/state.json`, `BASE/facts_orig.json` (baseline written by apply; if missing: `skeletons/<s>/facts.json`; if that
    is missing too, the baseline checks fail with that reason — do not re-read the skeleton here).
 3. PLAYBOOK §4 ("Behaviour found in the preview and the editor"), §5 Phases 6-7 and §8 pitfalls
-   (`/Users/volost/GitRepos/canva/handoff/PLAYBOOK.md`).
+   (`docs/reference/PLAYBOOK.md`).
 
 ## Steps
 
@@ -96,7 +96,7 @@ no threshold, this is this skill's choice). Put the worst 3 `{locator, text, mea
 A page with `light_texts` 0 counts as "nothing measured" there, not as a pass; if all pages are 0 the check is failed.
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$W/export/page_<i>.png" "$W/facts_now.json" "$W/outline_now.txt" "<page id>" <<'PYEOF'
 # snippet: contrast
 import json

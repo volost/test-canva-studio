@@ -40,6 +40,22 @@ class ConfigTests(unittest.TestCase):
                         load_config(p)
                 self.assertIn("forbidden_design_ids", str(ctx.exception))
 
+    def test_load_config_missing_file_points_to_the_example(self):
+        """A fresh clone has no config.json (it is git-ignored); the error must say to copy config.example.json."""
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(FileNotFoundError) as ctx:
+                load_config(Path(d) / "config.json")
+        self.assertIn("config.example.json", str(ctx.exception))
+
+    def test_example_config_has_the_same_keys_as_the_fixture(self):
+        """config.example.json is what a new developer copies: it must load, with the protected original listed
+        (the guard depends on it) and the same keys as the fixture that mirrors the real config.json."""
+        example = Path(__file__).parent.parent / "config.example.json"
+        cfg = load_config(example)
+        self.assertIn("DAHarqlqips", cfg.forbidden_design_ids)
+        self.assertEqual(json.loads(example.read_text(encoding="utf-8")).keys(),
+                         json.loads(FIXTURE.read_text(encoding="utf-8")).keys())
+
 
 if __name__ == "__main__":
     unittest.main()

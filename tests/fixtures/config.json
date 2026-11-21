@@ -1,9 +1,9 @@
 {
-  "root": "/Users/volost/GitRepos/canva/studio",
-  "python": "/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python",
-  "comfy_main": "/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/main.py",
-  "models_dir": "/Volumes/WoofData/ComfyUI/models",
-  "extra_model_paths": "/Users/volost/GitRepos/canva/pilot/comfy/extra_model_paths.yaml",
+  "root": "/example/studio",
+  "python": "/example/ComfyUI/.venv/bin/python",
+  "comfy_main": "/example/ComfyUI/main.py",
+  "models_dir": "/example/ComfyUI/models",
+  "extra_model_paths": "/example/studio/config/extra_model_paths.yaml",
   "comfy_url": "http://127.0.0.1:8188",
   "studio_port": 8765,
   "forbidden_design_ids": ["DAHarqlqips"]

@@ -15,7 +15,7 @@ direction in the studio, and the studio saves it), NOT the map, NOT any asset. D
 2. `ROOT/skeletons/S/map.json` — the slots and assets the style must cover (a style is valid only against this map).
 3. `app/schema.py` `validate_style` (the exact rules) and the shape in DESIGN §5.1 step 1;
    PLAYBOOK §5 Phase 2 "rules for images"; SPEC §1-§3 of the Sage & Linen study
-   (`/Users/volost/GitRepos/canva/study/sage-linen/SPEC.md`) as a model of palette roles and image prompts.
+   (`docs/reference/SPEC.md`) as a model of palette roles and image prompts.
 4. `BASE/brief.json` if present (same brief) and any earlier result in `BASE/jobs/*.result.json` — do not repeat a rejected look.
 
 ## Steps
@@ -66,7 +66,7 @@ direction in the studio, and the studio saves it), NOT the map, NOT any asset. D
      direction as a ratio, computed).
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$CODE" "$ROOT/skeletons/$S/map.json" "$W/direction_<n>.json" <<'PYEOF'
 # snippet: roles_covered
 import json

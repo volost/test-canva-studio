@@ -3,6 +3,10 @@
 forbidden_design_ids is the list of protected original Canva designs; guard.py and jobs.py refuse to
 target them. Keep it a frozenset of whole strings: a bare string would silently become a set of
 characters (an earlier bug fixed in review), which is why load_config insists on a list of non-empty strings.
+
+config.json holds this machine's absolute paths, so it is NOT in git (see README "Setup"): a new developer copies the
+committed config.example.json to config.json and edits the paths. load_config therefore fails with a message that
+says so when the file is missing (the most likely first-run mistake).
 """
 import json
 from dataclasses import dataclass
@@ -26,7 +30,13 @@ _REQUIRED = _PATH_KEYS + ("comfy_url", "studio_port", "forbidden_design_ids")
 
 
 def load_config(path: Path) -> Config:
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    path = Path(path)
+    if not path.is_file():
+        # Developer-facing (English) on purpose: it is a setup error of a fresh clone, not a message of the studio UI.
+        raise FileNotFoundError(
+            f"{path} not found. config.json is local to each machine and is not in git: "
+            f"copy config.example.json to config.json and edit the paths (see README.md, section Setup).")
+    data = json.loads(path.read_text(encoding="utf-8"))
     for key in _REQUIRED:
         if key not in data:
             raise ValueError(f"config missing key: {key}")

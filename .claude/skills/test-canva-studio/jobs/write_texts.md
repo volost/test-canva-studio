@@ -15,7 +15,7 @@ snippet, which keeps any earlier file as `texts.<UTC>.prev.json` and writes atom
 2. The map (`app/schema.py` documents its shape): the text slots are the entries with `type` `text` or `table_cell`; each
    has `role`, `personal`, `column_px`, `max_len`, `original`. The style (`name`, `description`, `palette`, `fonts`) and the brief
    set the voice. `app/texts.py` has the exact length rules.
-3. SPEC §6-§7 in `/Users/volost/GitRepos/canva/study/sage-linen/SPEC.md` (wording and where personal data may stand) and
+3. SPEC §6-§7 in `docs/reference/SPEC.md` (wording and where personal data may stand) and
    PLAYBOOK §5 Phase 4. The skeleton's own facts `ROOT/skeletons/S/facts.json` (written by map_skeleton) for the calendar.
 
 ## Rules (all checked by the snippet or by `app.texts`)
@@ -41,7 +41,7 @@ snippet, which keeps any earlier file as `texts.<UTC>.prev.json` and writes atom
 2. Calendar cells: `year` and `month` of the wedding date you choose, then
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$ROOT/skeletons/$S/map.json" "$ROOT/skeletons/$S/facts.json" <year> <month> > "$W/calendar.json" <<'PYEOF'
 # snippet: calendar_cells
 import calendar
@@ -103,7 +103,7 @@ PYEOF
    non-personal slot — control: it refuses an incomplete or leaking draft; prints `length_warnings`):
 
 ```bash
-PY=/Users/volost/ComfyUI-Installs/ComfyUI-test/ComfyUI/.venv/bin/python; CODE=/Users/volost/GitRepos/canva/studio; ROOT=<studio root>
+PY=<python path from §0>; CODE=<code folder from §0>; ROOT=<studio root>
 $PY -I - "$CODE" "$ROOT" "$T" "$W/texts.draft.json" "$W/sample_data.json" <<'PYEOF'
 # snippet: store_texts
 import dataclasses
