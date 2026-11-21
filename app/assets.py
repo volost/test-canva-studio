@@ -35,8 +35,13 @@ PAD_MARGIN = 0.02          # share of the canvas kept free around a padded cut-o
 COVERAGE = (0.005, 0.98)   # sensible alpha coverage of a transparent asset
 WHITE_HINT = ", isolated on a plain pure white background, soft even light, no shadow, no border"
 _NAME = re.compile(r"(?!.*__)[A-Za-z0-9_-]+")
+# Sentinel, not None: None means "compose WITHOUT a seal"; _AUTO means "look up the chosen seal in state.json".
 _AUTO = object()           # "use the chosen seal from state.json"
+# Separate from store.STATE_LOCK. This one guards only in-process bookkeeping (next version number, ticket
+# claims). Where both are needed (_finish) STATE_LOCK is taken on its own, never while this one is held.
 _LOCK = threading.RLock()  # version numbers, ticket claims
+# Process-local: after a restart a ticket could be processed again, which is harmless because versions are
+# only ever added; tickets.py also turns tickets the queue no longer knows into "lost" results.
 _CLAIMS = {}               # job_id -> "running" | "done": a ticket is postprocessed at most once per process
 
 
@@ -106,6 +111,8 @@ def _scan(out_dir, asset):
     return sorted(found)
 
 
+# Review finding: a composed version is offered only when cover, flap AND body all exist for that n.
+# choose() accepts only what this lists, so a half-written set can never put a broken envelope into Canva.
 def list_versions(out_dir, asset):
     """[(n, file)] sorted by n; a composed version is listed (as its cover) only when cover, flap and
     body all exist for that n, so a half-written set can never be chosen."""
@@ -121,6 +128,8 @@ def next_version(out_dir, asset):
     return 1 + max((n for n, _, _ in _scan(out_dir, asset)), default=0)
 
 
+# Versions are never overwritten or deleted: os.link fails if the name exists, so a lost race on a version
+# number is an error rather than a silent replace of a picture the owner may already have chosen.
 def _save_new(img, dest, fmt):
     """Write via a temp file and hard-link it into place: an existing file is never replaced."""
     fd, tmp = tempfile.mkstemp(dir=dest.parent, prefix=f".{dest.name}.", suffix=".tmp")
@@ -200,6 +209,9 @@ def _render(asset, img, spec, m, out_dir, seal):
         if not geom:
             raise AssetError("у карті немає блоку envelope")
         size = tuple(round(v * 2) for v in geom["section_px"])
+        # The texture is cut to section_px x2 (hence scale=2), and compose_envelope writes three layers that share
+        # one version number: <asset>__cover__vN.jpg (the choosable file), __flap__vN.png and __body__vN.png. The seal
+        # must already be chosen when this runs (see the ordering in submit_generations / process_finished).
         cover, flap, body = compose_envelope(_fit(img, size), geom, scale=2, seal=_load_seal(m, out_dir, seal))
         return [("cover", cover, "JPEG"), ("flap", flap, "PNG"), ("body", body, "PNG")]
     raise AssetError(f"невідомий тип ассета {kind!r}")
@@ -275,6 +287,8 @@ def check_asset(path, spec):
 def _check_env_files(cover, flap, body, geom, seal_path):
     try:
         seal = _open(seal_path).convert("RGBA") if seal_path else None
+        # seal_expected tells check_envelope whether a seal SHOULD be present: with a chosen seal its absence from the
+        # cover is a defect, without one it is not (otherwise the check would pass an envelope that lost its seal).
         return check_envelope(_open(cover), _open(flap), _open(body), geom, seal=seal, seal_expected=seal is not None)
     except Exception as e:
         return [f"[open] конверт не перевірено: {type(e).__name__}: {e}"]
@@ -293,6 +307,9 @@ def _env_problems(asset, f, m, out, chosen):
     return {f: probs, **rest}
 
 
+# Positive and negative controls (a project rule: a check is not believed until it has rejected known-bad
+# input and accepted known-good input in the same run). check_all runs this on every call and puts a problem
+# in the result when a control misbehaves, so a blind or broken check can never produce a green approval.
 def run_controls():
     """Run the SAME check functions on deliberately bad (and good) synthetic files.
 
@@ -357,6 +374,7 @@ def check_all(template_dir, m):
         elif spec.get("kind") == "composed":
             res.update(_env_problems(asset, f, m, out, chosen))
         else:
+            # Results are keyed by file name; the "problems" list is for template-level issues (nothing chosen, controls failed).
             res[f] = check_asset(out / f, spec)
     res["problems"] += [f"{a}: обрано файл для ассета, якого немає в карті" for a in chosen if a not in m["assets"]]
     res["controls_ok"] = ok
@@ -407,6 +425,8 @@ def submit_generations(queue, template_dir, m, style, only=None, prompts=None, s
     for ``process_finished``. Seeds are random unless given; the seed is in the ticket (and GenQueue's log)."""
     by = {p["asset"]: p for p in plan_generations(m, style)}
     names = list(by) if only is None else list(only)
+    # Composed assets are queued last: the single-worker GenQueue runs jobs in submission order, and a composed
+    # asset needs the seal (another asset) generated and chosen first. process_finished enforces the same order.
     names.sort(key=lambda a: by.get(a, {}).get("kind") == "composed")  # composed last: it needs the seal chosen first
     unknown = [a for a in names if a not in by]
     if unknown:
@@ -448,6 +468,9 @@ def _finish(t, st, tdir, m):
     return res
 
 
+# One-ticket-claim: the UI polls from several requests at once, so two threads can see the same finished job.
+# The claim table guarantees a ticket is postprocessed at most once per process (otherwise the same image would
+# be turned into two versions and reported twice).
 def _claim(job_id, state):
     """Under _LOCK: "claimed" -> this caller may process; otherwise why not."""
     with _LOCK:
@@ -473,6 +496,8 @@ def process_finished(queue, template_dir, m, tickets):
     waiting, results = set(), []
     for t in [t for t in tickets if not comp(t)] + [t for t in tickets if comp(t)]:
         jid = t["job_id"]
+        # A composed ticket waits while the seal's ticket from the same batch is unsettled: the seal is auto-chosen
+        # only when its postprocess finishes, and compose_envelope reads the chosen seal from state.json.
         if comp(t) and any(o["asset"] == seal and o["job_id"] in waiting for o in tickets):
             waiting.add(jid)
             continue

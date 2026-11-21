@@ -1,3 +1,7 @@
+"""Canva-side checkers: protected_changes, final_check (every check plus its built-in controls) and fields/page_notes.
+
+The "control" and "positive control" tests prove a checker is not blind: it must reject a deliberately bad design and
+accept the untouched one in the same run. Do not weaken them to make a check pass."""
 import copy
 import json
 import tempfile

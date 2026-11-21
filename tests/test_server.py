@@ -1,3 +1,4 @@
+"""HTTP layer: binds a real port on 127.0.0.1, so it needs the sandbox off (EPERM otherwise); checks health, the static index, path traversal refusal and that a static file is served."""
 import json
 import threading
 import unittest

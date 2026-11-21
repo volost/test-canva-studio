@@ -1,7 +1,15 @@
 """Validators for skeleton map.json and template style.json. Each returns a list of short messages
-(empty = valid); none raises on malformed input."""
+(empty = valid); none raises on malformed input.
+
+map.json is written by Claude (map_skeleton job) and edited by the owner's role assignments; style.json comes from the
+owner's chosen direction. Both are untrusted input, which is why every access here is type-checked first, and why the
+same validators run on PUT (api.py) AND again on the file as it is on disk before a job is requested or a step is
+approved (Claude's jobs write these files without going through the PUT routes).
+"""
 import re
 
+# Keys every map must carry. "keep" (texts intentionally left as they are) is optional and, like "protected", is read by
+# canva/final_check.py's coverage check, so a map that forgets a text cannot pass.
 TOP_KEYS = ("skeleton", "design_id", "pages", "assets", "slots", "envelope", "protected")
 SLOT_TYPES = ("image", "text", "colour", "table_cell")
 ASSET_KINDS = ("photo", "texture", "watercolour", "solid", "composed")
@@ -81,6 +89,8 @@ def validate_map(d) -> list:
                 out.append(f"{tag}: image slot references unknown asset {asset!r}")
         elif t in ("text", "colour") and asset is not None:
             out.append(f"{tag}: {t} slot must have asset null")
+        # A "layer" (cover/flap/body) names which of a composed asset's three generated pictures fills this slot; it is
+        # meaningless for any other asset kind, so it is refused there rather than ignored.
         if "layer" in s:
             layer = s["layer"]
             if layer not in LAYERS:
@@ -120,6 +130,7 @@ def validate_map(d) -> list:
                 out.append("envelope: missing key 'seal_rot_canva'")
             elif not _num(env["seal_rot_canva"]):
                 out.append("envelope: seal_rot_canva must be a number")
+            # The seal is another asset of the map (a picture chosen first); composed envelopes read it by this key.
             sa = env.get("seal_asset")
             if sa is not None and (not isinstance(sa, str) or sa not in assets):
                 out.append(f"envelope: seal_asset {sa!r} is not a known asset")
@@ -156,6 +167,8 @@ def validate_style(d, m) -> list:
             out.append(f"colour_roles {r!r}: {pr!r} is not a palette role")
     slots = m.get("slots") if isinstance(m.get("slots"), list) else []
     for s in slots:
+        # Every colour slot's role must be mapped to a palette entry; otherwise apply_canva would refuse the run later
+        # (canva/ops.py raises OpsError for a colour slot with no colour_roles entry), so it is caught here, at the style step.
         if (isinstance(s, dict) and s.get("type") == "colour"
                 and (not isinstance(s.get("role"), str) or s.get("role") not in roles)):
             out.append(f"colour_roles: no entry for colour slot role {s.get('role')!r}")

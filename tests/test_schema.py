@@ -1,3 +1,4 @@
+"""validate_map / validate_style on the fixtures in tests/fixtures: each test breaks one thing and expects its message."""
 import copy
 import json
 import unittest

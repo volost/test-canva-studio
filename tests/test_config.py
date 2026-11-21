@@ -1,3 +1,4 @@
+"""Config loading and validation (tests/fixtures/config.json mirrors the real config.json keys)."""
 import json
 import tempfile
 import unittest

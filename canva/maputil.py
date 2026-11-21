@@ -1,4 +1,10 @@
-"""Small helpers shared by the Canva-side scripts: which page a locator belongs to, and its index."""
+"""Small helpers shared by the Canva-side scripts: which page a locator belongs to, and its index.
+
+Used by ops.py and fields.py. A locator normally starts with the page id (`<page id>-<section>-<element>` as
+Canva reports it); a hand-written map may use the symbolic `p<index>/...` or `p<index>-...` form, which is
+resolved through the page's one-based `index`. When the facts have a record for the locator, the record's own
+page wins (it comes from the real design), so a wrongly spelled locator prefix cannot send an edit to another page.
+"""
 import re
 
 _SYMBOLIC = re.compile(r"^p(\d+)[/-]")

@@ -1,3 +1,4 @@
+"""Step states: can_start, approve, reopen and the stale cascade (pure functions, no I/O)."""
 import copy
 import unittest
 

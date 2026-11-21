@@ -3,6 +3,10 @@
 Differences from the source: ``cover_crop`` and ``pad_to_frame`` return just the image (the source
 also returned a box / info dict), ``alpha_coverage`` returns the single float ``coverage_gt8``
 (the source returned a dict; ``alpha_stats`` keeps that dict), asserts became ``ValueError``.
+
+Used by assets.py (cover_crop, pad_to_frame, aspect_error), contact sheets (checker, on_background) and the
+envelope composer. ASPECT_TOLERANCE is the project-wide 0.5 % frame tolerance; every function that makes an image
+for a frame re-checks it and raises rather than return a picture of the wrong proportions.
 """
 import numpy as np
 from PIL import Image

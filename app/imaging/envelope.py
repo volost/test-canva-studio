@@ -8,6 +8,8 @@ every position and size comes from ``geom`` (the ``envelope`` block of the skele
      "seal_centre": [x, y], "seal_size": [w, h], "seal_rot_canva": float}
 
 Nothing here reads or writes files: images in, images (or a list of problems) out.
+Called by assets.py: compose_envelope from _render (when a "composed" asset is generated), check_envelope from
+check_all (before the images step can be approved) and from run_controls (known-good and known-bad layers).
 
 Layer order: the flap layer (flap + its soft shadow + the seal, if any) lies ABOVE the body layer. The
 cover is the two layers flattened without the seal, so the three images agree by construction; the

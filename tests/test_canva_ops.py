@@ -1,3 +1,5 @@
+"""Canva-side operation planning and verification: build_ops / build_image_ops, chunk_ops limits, verify_batch and
+its control, the facts/outline/layout/probe_diff helpers and the CLIs. No Canva calls; everything runs on fixtures."""
 import copy
 import json
 import re

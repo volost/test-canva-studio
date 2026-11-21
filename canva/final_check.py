@@ -43,6 +43,7 @@ def _lc(c):
 
 
 def _verdict(name, problems, n, what):
+    # A check that examined nothing must FAIL, not pass: an empty slot list would otherwise give a green result.
     if n == 0:
         return {"name": name, "passed": False, "detail": f"nothing to check ({what}) - a check that examines nothing proves nothing"}
     head = f"{n} {what} checked, {len(problems)} wrong"
@@ -141,6 +142,8 @@ def _check_colours(orig, now, m, texts, style):
     return res
 
 
+# An unmapped text is never looked at by the other checks, so without this check an incomplete map would
+# give an all-green result. Every text/cell of the ORIGINAL must be a slot, protected, or listed in map["keep"].
 def _check_coverage(orig, m):
     miss = uncovered_texts(orig, m)
     bad = [f"{k}: text element not in the map (no slot, not protected, not in keep)" for k in miss]
@@ -229,6 +232,8 @@ def _probe(name, good, bad):
                       f"{'rejected' if not bad['passed'] else 'ACCEPTED'}")
 
 
+# Each probe feeds a check one input that must pass and one that must fail, built from the original design.
+# If a probe's bad input is accepted the check is blind, and the "control" entry fails the whole report.
 def _controls(orig, m, texts, style, images):
     """Probes of every check but `texts` on synthetic inputs built from the original. None of them depends on
     the design under test, so a green result there is a green result of the checker itself."""
@@ -326,6 +331,8 @@ def final_check(orig: dict, now: dict, m: dict, texts: dict, style: dict = None,
                         for s in _text_slots(m, texts))
         probes = _controls(orig, m, texts, style, images)
         slack = [d for _, ok, d in probes if not ok]
+        # The texts check must FAIL on the untouched original (nothing was written there). If it passes, it cannot see
+        # a missing edit; want_fail also guards the case where no text differs, when that proof is impossible.
         ok = want_fail and "texts" in failed and not slack
         res.append({"name": "control", "passed": ok, "detail":
                     f"texts fails on the untouched original ({'yes' if 'texts' in failed else 'NO'}; it fails {len(failed)} "

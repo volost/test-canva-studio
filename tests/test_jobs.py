@@ -1,3 +1,4 @@
+"""Job inbox: create_job (guard + one-writer rule), canva_busy, list_jobs and read_result, including corrupt files."""
 import dataclasses
 import json
 import os

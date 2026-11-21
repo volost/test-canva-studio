@@ -1,4 +1,10 @@
-"""Studio HTTP server: stdlib only, listens on 127.0.0.1."""
+"""Studio HTTP server: stdlib only, listens on 127.0.0.1 and nowhere else (HOST); it has no authentication,
+so never bind it to another interface.
+
+This file is transport only: JSON requests go to api.Api.handle, /files/ serves pictures, everything else is
+the static UI in app/static. It has no DELETE or PATCH on purpose (the studio deletes nothing). Started by
+run.sh and by tools/demo_root.py (via make_server).
+"""
 import json
 import mimetypes
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -38,6 +44,8 @@ def _make_handler(cfg: Config, api: Api):
         def _static(self, url_path: str) -> None:
             rel = unquote(url_path).lstrip("/") or "index.html"
             try:
+                # resolve() BEFORE the containment check: it collapses ".." and follows symlinks, so is_relative_to then
+                # tests where the file really is. Checking the unresolved string would let "../" or a symlink escape.
                 target = (STATIC_DIR / rel).resolve()
                 inside = target.is_relative_to(STATIC_DIR) and target.is_file()
             except (OSError, ValueError):
@@ -51,6 +59,8 @@ def _make_handler(cfg: Config, api: Api):
             """/files/<path>: only regular files inside skeletons/ and templates/ (symlinks resolved)."""
             rel = unquote(url_path[len("/files/"):])
             try:
+                # Same resolve + is_relative_to rule as _static, but limited to skeletons/ and templates/: the jobs inbox,
+                # config.json and the rest of the studio root must never be downloadable. Only regular files are served.
                 target = (cfg.root / rel).resolve()
                 inside = target.is_file() and (target.is_relative_to(skeletons) or target.is_relative_to(templates))
             except (OSError, ValueError):
@@ -70,6 +80,9 @@ def _make_handler(cfg: Config, api: Api):
                 return
             # always drain the body (capped) so an early error does not reset the connection
             raw = self.rfile.read(min(length, MAX_BODY + 1)) if length else b""
+            # JSON-only writes (review finding: a cross-origin <form> post from any web page could otherwise create
+            # agent jobs). A browser form cannot send application/json without a CORS preflight, which this server
+            # never approves, so requiring the header closes that hole. The UI always sends it (see api() in app.js).
             if method != "GET" and self.headers.get_content_type() != "application/json":
                 # a cross-origin <form> can only send text/plain or form types: refuse those writes
                 self._json(415, {"error": "потрібен Content-Type: application/json"})

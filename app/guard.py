@@ -3,11 +3,20 @@ to a skeleton, or to an unknown design is refused here, before anything is writt
 
 Every doubt resolves to GuardError (fail closed): a missing or malformed state, a missing skeleton
 id, a target that is not exactly the template's recorded copy.
+
+Called only from jobs.create_job, BEFORE the job file is written (and before the one-writer check there).
+This module must never be loosened to "allow" a doubtful case: it is the last line of defence between the
+studio and the purchased original design (cfg.forbidden_design_ids) and the skeleton design. What it
+refuses: any job whose target is a forbidden id; a Canva write job (apply_canva, verify) targeting the
+skeleton; a write job whose target is not exactly state["canva_copy_id"]; apply_canva before the earlier
+steps are approved. map_skeleton is read-only, so it may read the skeleton but never a forbidden id.
 """
 from app.config import Config
 from app.steps import can_start
 
 JOB_TYPES = frozenset({"map_skeleton", "style_directions", "write_texts", "apply_canva", "verify"})
+# Review ruling: forbidden_design_ids are refused as target for EVERY job type, but the skeleton id is
+# refused as a target only for write types, because reading the skeleton is step 0 (map_skeleton).
 # Types that WRITE to a Canva design. map_skeleton only reads, so it is not here.
 CANVA_WRITE_TYPES = frozenset({"apply_canva", "verify"})
 
@@ -69,6 +78,8 @@ def check_job(job: dict, cfg: Config, skeleton_design_id: str, state: dict | Non
         if _norm(copy_id) in forbidden or _norm(copy_id) == skeleton_key:
             raise GuardError("state canva_copy_id points at an original design or the skeleton")
 
+    # verify and apply_canva differ on purpose: verify needs an existing copy and must hit exactly it; apply_canva
+    # may run with NO copy yet (target must then be null, and Claude creates the copy from the skeleton).
     if jtype == "verify":
         if copy_id is None:
             raise GuardError("verify: the template has no Canva copy yet")

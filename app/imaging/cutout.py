@@ -1,6 +1,11 @@
 """Cut-outs from a near-white ground (ported from cutout_watercolour.py, cutout_solid.py and
 pilot/tools/white_to_alpha.py). Both functions take a PIL image and return a tight-cropped RGBA
 image; padding to a frame is ``core.pad_to_frame``. No files, no globals.
+
+Called by assets._render for the "watercolour" and "solid" asset kinds. Both REFUSE (ValueError) rather than guess
+when the ground is not near-white or the result is implausible (nothing left, or suspicious coverage): assets.py
+turns that into a user-visible error, so a bad generation is never silently turned into an empty or opaque picture.
+The prompts for these kinds ask for a plain white background (assets.WHITE_HINT) for exactly this reason.
 """
 import numpy as np
 from PIL import Image

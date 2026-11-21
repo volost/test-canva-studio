@@ -1,5 +1,11 @@
 """Texts: validation against the map's text slots, length warnings, and the manual font checklist.
-Strings are never altered here (no strip, no normalisation, no escaping)."""
+Strings are never altered here (no strip, no normalisation, no escaping).
+
+Used by api.py (PUT texts, GET template, request/approve checks). Both "text" and "table_cell" slots
+carry plain strings in texts.json keyed by the slot's locator (review ruling: calendar cells are
+personal values and must be settable, so validate_texts must accept them too). Length warnings are
+advisory only; they never block saving or approving.
+"""
 NOT_SET = "не задано"
 PARAGRAPH_PERCENT = 115
 

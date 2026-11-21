@@ -1,3 +1,4 @@
+"""ComfyUI client against a fake ComfyUI HTTP server on 127.0.0.1 (no real ComfyUI, no GPU)."""
 import dataclasses
 import json
 import socket

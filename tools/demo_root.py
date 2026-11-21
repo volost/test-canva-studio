@@ -36,6 +36,7 @@ from app.store import read_json, write_json_atomic  # noqa: E402
 
 UNICODE = "We’re “so” happy — Café & <b>\nline"
 COPY_ID = "DAdemoCopy0001"
+# Port 9 (discard) is closed on a normal machine: comfy.ping fails fast, so the demo never reaches a real ComfyUI.
 CLOSED_COMFY = "http://127.0.0.1:9"
 
 
@@ -65,6 +66,8 @@ def make_config(root: Path, port: int, models_present: bool = True):
 
 
 # ------------------------------------------------------------------ small helpers
+# Calls Api.handle directly (no HTTP), so seeding goes through the real routes, guard and state transitions:
+# the demo data is what the studio itself would produce, not hand-made files that could drift from the real format.
 def call(api: Api, method: str, path: str, body=None):
     raw = json.dumps(body if body is not None else {}, ensure_ascii=False).encode("utf-8") if method in ("POST", "PUT") else b""
     status, payload = api.handle(method, path, raw)

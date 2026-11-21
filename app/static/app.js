@@ -7,6 +7,18 @@
  *  - every POST/PUT is sent with Content-Type: application/json (with no body: {});
  *  - polling: GET /api/jobs (+ /api/health) every 3 s as a setTimeout chain, GET /api/gen while there are
  *    generations pending; forms the owner is editing are not redrawn by polling.
+ *
+ * Map of this file (search for the banner comments):
+ *  - views: home (templates, skeletons, jobs panel), skeleton (map + role assignment), template (a step bar and ONE
+ *    step panel at a time: style, images, texts, apply, verify). The route is the URL hash: #/s/<skeleton>,
+ *    #/t/<template>[/<step>]; renderTemplate shows the panel of the current step and calls its render function.
+ *  - state: one object S (below). S.tpl is the last GET /api/templates/<t> payload; every panel is drawn from it,
+ *    never from what an earlier click did, so the screen always shows what the server says.
+ *  - helpers: api() (all HTTP, JSON only), el() / addKid() (the only way elements are built), busy() (disable a
+ *    button while its request runs), setMsg() (inline message under a panel).
+ *  - polling: tick() at the end of the file. It is also what moves steps forward: the server reconciles finished
+ *    Claude jobs and generations whenever it is asked for them (api.py _refresh), so polling is not optional.
+ *  - owner-facing text is Ukrainian and must stay so; this file's comments are English.
  */
 (function () {
   'use strict';
@@ -23,6 +35,8 @@
   var SEAL_HINT = 'Якщо ви змінили печатку, конверт потрібно перегенерувати: натисніть «Ще раз» на картці «envelope».';
   var STALE_STEP_APPROVABLE = ['style', 'images', 'texts'];
 
+  // All mutable UI state. dirty = the owner has unsaved edits in the current panel (see renderTemplate / polling);
+  // renderedStep + renderToken identify the panel that is on screen, so late async answers can tell they are stale.
   var S = {
     route: { view: 'home', name: null, step: null },
     templates: [], skeletons: [], jobs: [], tplErrors: {}, health: null,
@@ -32,6 +46,7 @@
     promptDraft: {}, styleDraft: null,
     started: false
   };
+  // job result files, fetched once per job (they never change after the skill writes them), keyed template/job id.
   var resultCache = {};
 
   /* ------------------------------------------------------------------ DOM helpers */
@@ -82,6 +97,8 @@
   function ApiError(status, message, data) { this.status = status; this.message = message; this.data = data; }
   function NetError(message) { this.message = message; }
 
+  // The only place that talks to the server. Every non-GET carries Content-Type: application/json: the server answers
+  // 415 to anything else (a cross-origin form post cannot set that header, which is what blocks forged job requests).
   function api(method, path, body) {
     var opt = { method: method, headers: {} };
     if (method !== 'GET') {
@@ -163,6 +180,8 @@
     qs('missing-text').textContent = text;
   }
 
+  // A hash change never reloads the page. Switching to ANOTHER template drops its cached payload and drafts; staying on
+  // the same template just redraws from the cached payload.
   function onRoute() {
     var next = parseRoute();
     var sameTpl = next.view === 'template' && S.route.view === 'template' && S.route.name === next.name;
@@ -468,6 +487,7 @@
 
   function refreshTemplate(respectDirty) {
     var name = S.route.name;
+    // The user may have navigated away while this request was in flight: every handler below re-checks the route first.
     return api('GET', '/api/templates/' + enc(name)).then(function (d) {
       if (S.route.view !== 'template' || S.route.name !== name) return;
       S.tpl = d; S.tplError = null;
@@ -481,6 +501,7 @@
     }, function (e) {
       if (S.route.view !== 'template' || S.route.name !== name) return;
       if (e instanceof ApiError && e.status === 404) { missing('Шаблон «' + name + '» не знайдено.'); return; }
+      // 409 here means the server refused to read this template (corrupt state.json): show that, not a generic error.
       if (e instanceof ApiError && e.status === 409) { S.tpl = null; S.tplError = e.message; renderTemplate(false); return; }
       showBanner(errorText(e));
     });
@@ -517,6 +538,9 @@
 
     var step = activeStep();
     STEPS.forEach(function (s) { qs('screen-' + s).hidden = (s !== step); });
+    // Dirty-form handling: a background refresh (polling) must never wipe what the owner is typing. If this panel has
+    // unsaved edits it is left as it is and a "data changed" notice is shown instead. Only an explicit action (save,
+    // approve, the refresh button, a route change) calls this with respectDirty = false and redraws.
     if (respectDirty && S.dirty && S.renderedStep === step) {
       qs('stale-notice').hidden = false;
       return;
@@ -572,6 +596,7 @@
     var ap = approveInfo(step);
     var approve = el('button', { type: 'button', class: 'btn btn-primary', id: 'approve-' + step, 'data-test': 'approve-' + step, text: 'Затвердити крок', disabled: !ap.ok });
     approve.addEventListener('click', function () {
+      // Approving with unsaved edits would approve the OLD saved version while the screen shows the new one.
       if (S.dirty) { setMsg('msg-' + step, 'Є незбережені зміни: спершу збережіть їх, інакше затвердиться стара версія.', 'warn'); return; }
       busy(approve, 'Затверджую…', function () { return api('POST', '/api/templates/' + enc(S.route.name) + '/approve', { step: step }); })
         .then(function (r) { if (!r) return; return refreshTemplate(false).then(function () { setMsg('msg-' + step, 'Крок «' + STEP_TITLES[step] + '» затверджено.', 'ok'); }); })
@@ -633,6 +658,7 @@
   function mapAssets() { var m = S.tpl && S.tpl.map; return isObj(m) && isObj(m.assets) ? m.assets : {}; }
 
   function renderStyle() {
+    // token: an async answer may arrive after the panel was redrawn or left; it draws only if the token still matches.
     var t = S.tpl, root = clear(qs('screen-style')), token = S.renderToken;
     panelHead('style', 'Стиль', 'Claude пропонує напрями за вашим брифом. Оберіть один і за потреби поправте палітру та підказки для картинок.').forEach(function (n) { root.appendChild(n); });
     root.appendChild(el('h3', { text: 'Бриф' }));
@@ -1038,6 +1064,7 @@
   }
 
   /* ------------------------------------------------------------------ APPLY panel */
+  // The id comes from state.json, which Claude writes: it becomes part of an href only after this pattern check.
   function designLink(id) {
     if (typeof id === 'string' && /^[A-Za-z0-9_-]+$/.test(id)) {
       return el('a', { id: 'canva-design-link', 'data-test': 'canva-design-link', href: 'https://www.canva.com/design/' + id + '/edit', target: '_blank', rel: 'noopener noreferrer', text: 'Відкрити копію в Canva (' + id + ')' });
@@ -1079,6 +1106,8 @@
   }
 
   /* ------------------------------------------------------------------ VERIFY panel */
+  // The "font swapped" ticks are the owner's own checklist, kept in this browser only (localStorage may be unavailable:
+  // every access is try/catch and the page works without it). They never reach the server.
   function fontDoneKey(locator) { return 'studio-font-done:' + S.route.name + ':' + locator; }
   function loadFlag(k) { try { return window.localStorage.getItem(k) === '1'; } catch (e) { return false; } }
   function saveFlag(k, v) { try { if (v) window.localStorage.setItem(k, '1'); else window.localStorage.removeItem(k); } catch (e) { /* ignore */ } }
@@ -1152,11 +1181,16 @@
   }
 
   /* ------------------------------------------------------------------ polling */
+  // Signatures: a compact string of what a payload SHOWS, compared between polls so the template is redrawn only when
+  // something visible changed (a redraw is what could disturb the owner).
   function genSig(g) {
     if (!g || (!(g.pending || []).length && !(g.recent || []).length && !g.error)) return 'none';
     return JSON.stringify([(g.pending || []).map(function (p) { return [p.job_id, p.state]; }), (g.recent || []).length, g.error || null]);
   }
 
+  // Polling as a setTimeout CHAIN, not setInterval: the next tick is scheduled only after this one has finished (success
+  // or failure), so slow answers never pile up. GET /api/jobs also makes the server reconcile finished jobs into step
+  // statuses. /api/gen is asked only while generations are pending on the open template.
   function tick() {
     Promise.all([api('GET', '/api/jobs'), api('GET', '/api/health')]).then(function (r) {
       var jobs = r[0];
@@ -1169,6 +1203,7 @@
       var jobsChanged = (S.jobSig !== null && sig !== S.jobSig);
       S.jobSig = sig;
 
+      // Redraw only on a real change; refreshTemplate(true) respects unsaved edits (see renderTemplate).
       var needGen = S.route.view === 'template' && S.tpl && S.tpl.generation && S.tpl.generation.pending.length > 0;
       var genPromise = needGen ? api('GET', '/api/gen') : Promise.resolve(null);
       return genPromise.then(function (gen) {

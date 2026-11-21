@@ -1,4 +1,10 @@
-"""Sequential background generation queue: one daemon worker, one log line per run."""
+"""Sequential background generation queue: one daemon worker, one log line per run.
+
+One worker on purpose: ComfyUI renders on the one local GPU, so running several generations at once only
+slows each down and risks running out of memory. The queue lives in memory only; it is lost on a restart,
+which is why tickets.py persists the tickets and marks the ones this queue no longer knows as "lost".
+Each run appends one JSON line to <root>/logs/generations.jsonl (the audit trail of seeds and prompts).
+"""
 import json
 import queue
 import threading
@@ -43,6 +49,7 @@ class GenQueue:
             jid, job = self._q.get()
             try:
                 self._process(jid, job)
+            # If this thread died, every later generation would stay "queued" forever with no error shown.
             except Exception as e:  # the worker must never die
                 self._set(jid, state="failed", error=f"Внутрішня помилка: {e}")
 

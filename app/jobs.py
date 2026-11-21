@@ -24,6 +24,7 @@ __all__ = [
     "read_result",
 ]
 
+# Folder = state. A job file lives in exactly one of these; the skill moves it pending -> running -> done|failed.
 STATE_FOLDERS = ("pending", "running", "done", "failed")
 _ACTIVE_FOLDERS = ("pending", "running")
 _JOB_ID_RE = re.compile(r"\d{8}T\d{6}Z-[a-z_]+(?:-\d+)?")
@@ -169,6 +170,9 @@ def create_job(
         raise ValueError(f"invalid target_design_id {target_design_id!r}: use letters, digits, - and _")
 
     write = type in CANVA_WRITE_TYPES
+    # Review ruling: the skeleton id comes from the skeleton's map.json when that file exists, else from
+    # inputs["design_id"] (only map_skeleton passes it, before any map exists). For a write job a missing or
+    # corrupt map, or a missing/corrupt template state, is a GuardError and never a fallback.
     skeleton_design_id = _resolve_skeleton_design_id(cfg, skeleton, inputs, write)
     state = None
     if template is not None:
@@ -190,6 +194,8 @@ def create_job(
     # check_job needs the id-less job only for its fields; the guard runs BEFORE any write
     check_job(job, cfg, skeleton_design_id, state)
 
+    # The busy check and the write must be one atomic step, else two threads could both see "free" and
+    # both queue a Canva writer.
     with _CREATE_LOCK:
         if write and canva_busy(cfg):
             raise GuardError("a Canva job is already pending or running: one writer at a time")

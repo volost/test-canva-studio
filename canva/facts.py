@@ -104,7 +104,10 @@ def element_facts(e, page_id, section_id, parent, order, out):
     elif t == "group":
         rec["children"] = [c["id"] for c in e.get("children", [])]
     else:
+        # Unknown element types are kept as a key list instead of being dropped: nothing is skipped silently, and a new
+        # connector element type shows up in the diff.
         rec["rawKeys"] = sorted(e.keys())
+    # A locator is the key of every later comparison (map, ops, checks); two records under one key would hide a change.
     if loc in out:
         raise ValueError(f"duplicate locator {loc}")
     out[loc] = rec

@@ -1,4 +1,13 @@
-"""Template store on disk: atomic JSON files and template folders. Nothing here deletes anything."""
+"""Template store on disk: atomic JSON files and template folders. Nothing here deletes anything.
+
+Callers: every other app/ module reads and writes JSON through read_json / write_json_atomic, and gets
+paths from template_dir / skeleton_dir. Those two validate the name against _NAME_RE, which is also what
+keeps a name from ever containing "/" or ".." (path traversal), so never build a templates/ or skeletons/
+path by hand from user input.
+
+STATE_LOCK (below) is shared across modules: assets.py and api.py (and tickets.py when it saves) take the
+SAME lock for every state.json read-modify-write. Do not introduce a second lock for state.json.
+"""
 import json
 import os
 import re
@@ -11,6 +20,12 @@ from app.steps import STEPS, now_utc
 
 # One process-wide lock for every read-modify-write of a template's state.json (chosen files in
 # assets.py, step statuses elsewhere). Re-entrant; hold it across the whole read -> change -> write.
+# Why one global RLock rather than one per template: the server is threaded and there are only a few
+# templates, so contention is irrelevant while a missed lock would silently lose a step change or a chosen
+# file (two handlers reading the same old state, last writer wins). RLock because a handler that already
+# holds it calls helpers that take it again.
+# Lock order across the app: tickets.GEN_LOCK is always taken BEFORE STATE_LOCK, never the other way round
+# (taking them in opposite orders in two threads would deadlock).
 STATE_LOCK = threading.RLock()
 
 _NAME_RE = re.compile(r"[a-z0-9-]{1,40}")
@@ -27,6 +42,9 @@ class CorruptJSON(Exception):
 def write_json_atomic(path: Path, data) -> None:
     """Write `data` as UTF-8 JSON via a temp file in the same folder, then os.replace."""
     path = Path(path)
+    # Temp file in the SAME folder, because os.replace is only atomic within one filesystem. A reader
+    # (the studio UI polling, or the /test-canva-studio skill) therefore sees either the old or the new file,
+    # never a half-written one. fsync before replace so a crash cannot leave an empty target.
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
     try:

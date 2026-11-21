@@ -39,6 +39,9 @@ from canva.protected import protected_members  # noqa: E402
 _HEX = re.compile(r"#[0-9a-fA-F]{6}")
 TOL_BOX = 0.05       # px: allowed deviation of an image box from the exact cover box
 TOL_POS = 0.02       # px: position / size after position_element / resize_element
+# Connector limits: at most MAX_OPS operations and MAX_FILLS update_fill per edit-design call. chunk_ops enforces them
+# and never splits one element's operations, so update_fill and its crop_media always travel in ONE call (an update_fill
+# alone leaves the picture box about 11 px too big on every side).
 MAX_OPS = 60         # operations per edit-design call (the largest batch run against the connector was 65)
 MAX_FILLS = 26       # update_fill operations per call (ground truth: at most 26 images per batch)
 _FMT_FIELD = {"color": "color", "font_size": "fontSize", "text_align": "align", "font_style": "style",
@@ -154,6 +157,7 @@ def build_ops(m: dict, style: dict, texts: dict, facts: dict, notes: list = None
         notes.append(f"text role {role!r}: {n} slot(s) keep the skeleton's colour - no entry in style colour_roles")
     for loc in uncovered_texts(facts, m):
         notes.append(f"{loc}: text element is not in the map (no slot, not protected, not in keep) - left untouched")
+    # Last line of defence: whatever the code above did, an operation on a protected locator never leaves build_ops.
     for page_ops in out.values():
         for op in page_ops:
             assert op["locator_id"] not in protected, f"protected locator reached the batch: {op}"
@@ -172,6 +176,8 @@ def _text_slot(s, style, texts, facts, emit, notes):
         new, cur, orig = texts[loc], rec.get("text", ""), s.get("original")
         if not isinstance(new, str):
             raise OpsError(f"{loc}: text must be a string, got {type(new).__name__}")
+        # The design must still hold the map's original wording (or already the new text, so a re-run is idempotent).
+        # Anything else means the map describes another design or the design was edited by hand: refuse to overwrite it.
         if orig is not None and cur != orig and cur != new:
             raise OpsError(f"{loc}: the design holds {cur!r}, the map expects {orig!r}")
         if s.get("max_len") and len(new) > s["max_len"]:
@@ -248,6 +254,8 @@ def build_image_ops(m: dict, uploads: dict, facts: dict, notes: list = None) -> 
         crops.setdefault(pid, []).append({"type": "crop_media", "locator_id": loc, "top": round(b["top"], 4),
                                           "left": round(b["left"], 4), "width": round(b["width"], 4),
                                           "height": round(b["height"], 4), "rotation": 0})
+    # Fills first, then crops: both lists are per page and stay in slot order, so chunk_ops (which groups by element)
+    # keeps each update_fill next to its crop_media.
     return {pid: fills[pid] + crops[pid] for pid in fills}
 
 
@@ -261,6 +269,8 @@ def chunk_ops(ops: list, section_of=None, limit: int = MAX_OPS, max_fills: int =
     All operations of one element stay together and in order (so an update_fill is never parted from its
     crop_media, nor a replace_text from its format_text); elements of one section stay together where the section
     fits in a call; a larger section is cut between elements. `section_of(locator)` names the section."""
+    # Elements of one section are kept together in one call where the section fits; a larger section is cut
+    # only between elements, never inside one.
     section_of = section_of or _section_guess
     units, order = {}, []
     for i, op in enumerate(ops):
@@ -329,6 +339,8 @@ def _frame(rec):
     return {k: rec.get(k) for k in ("box", "rotation", "opacity", "locked", "parent", "order")}
 
 
+# Whitelist of the fields (flattened paths, list indexes as *) an operation may change. verify_batch reports every
+# other change inside a targeted element as "unexplained". Unknown operation types allow nothing.
 def _allowed(op, a):
     t, rt = op["type"], a["type"]
     if t == "replace_text":
@@ -386,6 +398,7 @@ def _expect(op, a, b, batch):
             p.append(f"media is {_media(b).get('media')!r}, expected {op['asset_id']!r}")
         if _frame(a) != _frame(b):
             p.append("the frame (box, rotation, opacity, lock, order) changed")
+        # The same rule as in build_image_ops, checked on the batch actually sent, because the batch file is what the session sends.
         if not any(o["type"] == "crop_media" and o["locator_id"] == op["locator_id"] for o in batch):
             p.append("update_fill without a crop_media on the same element in this batch (the box would stay ~11 px too big)")
     elif t == "crop_media":
@@ -450,6 +463,8 @@ def verify_batch(before: dict, after: dict, ops: list) -> list:
             n = _norm(path)
             if not any(n == x or n.startswith(x + ".") for x in allowed[loc]):
                 found.append(f"unexplained change in {loc}: {path}: {_short(fa.get(path))} -> {_short(fb.get(path))}")
+    # Everything that is not a target must be byte-identical before and after: this is what catches a connector
+    # side effect (a moved neighbour, a vanished element) that no operation asked for.
     for k in sorted(set(before) | set(after)):
         if k in targets or before.get(k) == after.get(k):
             continue

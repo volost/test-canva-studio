@@ -1,4 +1,12 @@
-"""Step states of a template. All functions are pure: they return a modified deep copy of `state`."""
+"""Step states of a template. All functions are pure: they return a modified deep copy of `state`.
+
+STEPS run in order style -> images -> texts -> apply -> verify; a step can start only when every earlier
+step is approved (can_start). Persisting the result is the caller's job (api.py, under store.STATE_LOCK).
+
+The "stale cascade": when an earlier step changes (reopen) or is re-requested (api._request ->
+invalidate_after), every LATER step that is approved/review/waiting_claude becomes `stale`, so work built
+on the old result can no longer be approved or applied to Canva by accident. A stale step must be redone.
+"""
 import copy
 from datetime import datetime, timezone
 
@@ -48,6 +56,9 @@ def invalidate_after(state: dict, step: str) -> dict:
     A step waiting for Claude is stale too: its result will be built on data that has changed."""
     _check_step(step)
     out = copy.deepcopy(state)
+    # waiting_claude is included on purpose (review finding: an old job finishing could otherwise move a step
+    # that was built on outdated data to `review` and get it approved). api._reconcile_jobs only advances
+    # waiting_claude steps, so a step marked stale here never jumps back to review when the old job ends.
     for later in STEPS[STEPS.index(step) + 1 :]:
         if out["steps"][later]["status"] in ("approved", "review", "waiting_claude"):
             _stamp(out, later, "stale")

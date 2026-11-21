@@ -1,3 +1,4 @@
+"""Atomic JSON writes, CorruptJSON detection and template folder creation."""
 import dataclasses
 import json
 import os

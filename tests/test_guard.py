@@ -1,3 +1,5 @@
+"""The original-design guard. "DAHarqlqips" below stands for the purchased original design and SKELETON_ID for the
+skeleton: a job aimed at either must be refused for a Canva write, and every doubtful input must fail closed."""
 import copy
 import dataclasses
 import unittest

@@ -66,6 +66,8 @@ def protected_changes(orig: dict, now: dict, m: dict) -> list:
         if p not in orig:
             found.append(f"UNKNOWN protected locator {p}: not in the original facts (stale map?)")
     sections = set()
+    # Strict members (the protected locators and their plain descendants) must be identical in every field. Slots
+    # the map lists below a protected group (envelope layers) get their content replaced, so only their frame is compared.
     strict = set(protected_members(orig, m))
     for k in protected_members(orig, m, with_slots=True):
         v = orig[k]

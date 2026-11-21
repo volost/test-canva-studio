@@ -28,12 +28,14 @@ from app.steps import STEPS, now_utc
 from app.store import (STATE_LOCK, CorruptJSON, create_template, list_templates, read_json, skeleton_dir,
                        template_dir, write_json_atomic)
 
+# Same value as server.MAX_BODY (the server stops reading there; _parse enforces the cap on what reaches Api.handle).
 MAX_BODY = 5 * 1024 * 1024
 _DESIGN_ID = re.compile(r"[A-Za-z0-9_-]+")
 # job type -> the step it works on
 STEP_OF = {"style_directions": "style", "write_texts": "texts", "apply_canva": "apply", "verify": "verify"}
 _ACTIVE = ("pending", "running")
 BAD_STATE = "пошкоджений state.json"
+# Shown when apply finished but Claude did not record state.canva_copy_id (see _effective).
 NO_COPY = "Claude не записав id копії — перевірте /test-canva-studio"
 _ROUTES: list = []
 
@@ -65,6 +67,8 @@ def _opt(path: Path):
         return None, f"файл {path.name} не читається: {e.strerror or e}"
 
 
+# Used wherever a template is listed or loaded, so ONE bad template (corrupt state.json or a missing step)
+# never turns /api/jobs, /api/gen or the template list into a 500 (review finding on bad templates).
 def _state_ok(state) -> bool:
     """Valid JSON is not enough: the step table every handler indexes must be complete."""
     st = state.get("steps") if isinstance(state, dict) else None
@@ -95,6 +99,8 @@ def _result_info(cfg: Config, job: dict) -> dict:
             "status": status, "summary": summary, "checks": checks}
 
 
+# Newest per job type: the UI and the reconciliation only care about the latest run of each type, so an
+# older failed attempt must not override a newer success (ties on created_utc are broken by job id).
 def _latest(jobs: list, **match) -> dict:
     """{type: newest job} among jobs whose fields equal `match`."""
     out: dict = {}
@@ -212,6 +218,8 @@ class Api:
             raise ApiError(409, f"{what}.json недійсний: " + "; ".join(problems), problems=problems)
         return data
 
+    # Every state.json change goes through here (or takes STATE_LOCK explicitly): the state is re-read INSIDE
+    # the lock, so a concurrent change is never overwritten with a stale copy.
     def _mutate(self, d: Path, fn):
         """Locked read-modify-write of state.json; `fn(state)` returns the new state or None (no change)."""
         with STATE_LOCK:
@@ -242,10 +250,15 @@ class Api:
         return "/".join(parts)
 
     # ------------------------------------------------------------------ R13 / R14 reconcile
+    # Step transitions are owned by the API, because only it sees both the job results and state.json. The
+    # helpers _raw_infos / _effective / _reconcile_jobs map "newest job result per type" onto steps:
+    # done -> review, failed or corrupt -> draft. Only steps that are waiting_claude are ever moved.
     def _raw_infos(self, name: str, jobs: list) -> dict:
         return {STEP_OF[t]: _result_info(self.cfg, j) for t, j in _latest(jobs, template=name).items() if t in STEP_OF}
 
     @staticmethod
+    # A "done" apply with no canva_copy_id means Claude made a copy but did not record it. Counting that as
+    # success would let the owner press apply again, and apply with target null creates a SECOND copy.
     def _effective(infos: dict, state: dict) -> dict:
         """A done apply_canva with no canva_copy_id recorded counts as failed, visibly (R19)."""
         a = infos.get("apply")
@@ -279,6 +292,8 @@ class Api:
             return None
         self._mutate(template_dir(self.cfg, name), fn)
 
+    # Called on every GET of a template and of the job/generation lists, i.e. on every UI poll: this is how a
+    # finished generation or Claude job becomes visible, there is no background thread for it.
     def _refresh(self, name: str, jobs=None) -> dict:
         """Process finished generations, then reconcile job and images steps. Returns the tickets data."""
         d = self._tpl(name)
@@ -385,6 +400,8 @@ class Api:
                 raise ApiError(404, f"скелет {skeleton} не знайдено")
             if tdir.exists():
                 raise ApiError(409, f"шаблон {name} уже існує")
+            # create_job (guard + one-writer check) runs BEFORE the template folder exists, so a refused job leaves
+            # nothing on disk.
             job = create_job(self.cfg, "style_directions", skeleton, name, {"brief": brief}, None)  # guard first
             create_template(self.cfg, name, skeleton)
             write_json_atomic(tdir / "brief.json", {"brief": brief})
@@ -474,6 +491,8 @@ class Api:
         state: startable check, `prepare(state) -> (inputs, target)` (its own refusals), the job, and the
         status change. Steps AFTER the requested one that are approved/review/waiting_claude become stale
         (re-running a step outdates what was built on its old result)."""
+        # Re-checked INSIDE the lock on a fresh state: the owner may have clicked twice, or another request may
+        # have started a step in between (review finding: startable and Canva-busy are re-checked here, not only before the lock).
         step = STEP_OF[jtype]
         with STATE_LOCK:
             state = self._state(d)
@@ -512,6 +531,8 @@ class Api:
             if jtype == "apply_canva" and self._effective(self._raw_infos(t, list_jobs(self.cfg)), state).get(
                     "apply", {}).get("copy_missing"):
                 raise ApiError(409, NO_COPY)  # re-applying with target null would create a second copy
+            # Canva allows one writer at a time; jobs.create_job re-checks this under its own lock, this early
+            # check just gives the owner a clear message.
             if canva_busy(self.cfg):
                 raise ApiError(409, "Canva уже зайнята іншим завданням: дочекайтесь його результату")
             inputs = dict(self._paths(t, state["skeleton"]), chosen=state.get("chosen") or {})
@@ -552,6 +573,8 @@ class Api:
         data = self._refresh(t)
         state = self._state(d)
         self._check_approvable(state, step)
+        # The image checks below read files without the lock, so remember the choice now and compare it again
+        # under STATE_LOCK before approving: a choice changed meanwhile would otherwise be approved unchecked.
         chosen_before = dict(state.get("chosen") or {})
         if step in ("style", "texts"):
             self._need_valid(d, self._need_map(state["skeleton"]), step)
@@ -618,6 +641,7 @@ class Api:
             raise ApiError(409, "диск моделей не змонтовано")
         if not comfy.ping(self.cfg):
             raise ApiError(409, "ComfyUI недоступний — запустіть run.sh")
+        # Lock order: GEN_LOCK first, then STATE_LOCK (tickets.add saves under it). Keep that order everywhere.
         with tickets.GEN_LOCK:
             new = assets.submit_generations(self.queue, d, m, style, only=names, prompts=prompts)
             tickets.add(self.cfg, t, new)
@@ -633,6 +657,8 @@ class Api:
         if asset not in m["assets"]:
             raise ApiError(400, f"ассета {asset!r} немає в карті")
         with STATE_LOCK:
+            # Choosing a DIFFERENT file after images was approved reopens images, which stales the later steps:
+            # the texts/apply built on the old pictures must be redone.
             before = (self._state(d).get("chosen") or {}).get(asset)
             assets.choose(d, asset, file)  # AssetError -> 400
             if before != file:

@@ -1,3 +1,4 @@
+"""GenQueue: sequential worker, failure handling and the generations log, with an injected fake generate function."""
 import dataclasses
 import json
 import tempfile

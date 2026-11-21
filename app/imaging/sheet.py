@@ -1,5 +1,9 @@
 """Contact sheet (ported from sage-linen/tools/contact_sheet.py): labelled thumbnails in a grid,
-transparent files on a mid-grey checker. Items and output are parameters; the long edge is capped."""
+transparent files on a mid-grey checker. Items and output are parameters; the long edge is capped.
+
+Called by assets.build_manifest. A missing file is drawn as "MISSING" rather than raising, so the sheet the owner
+looks at shows the gap. The long edge is capped at 1568 px because larger images are downscaled anyway when a
+model looks at them."""
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont

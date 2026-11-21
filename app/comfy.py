@@ -1,7 +1,9 @@
 """Minimal ComfyUI HTTP client (stdlib only): Z-Image Turbo text-to-image.
 
 Talks only to cfg.comfy_url: POST /prompt, GET /history/<id>, GET /view.
-The node graph reproduces pilot/tools/comfy_generate.py.
+The node graph reproduces pilot/tools/comfy_generate.py. The model file names in build_graph must exist
+under cfg.models_dir (z_image_turbo_bf16, qwen_3_4b, ae); ComfyUI is started by run.sh, never by this code.
+Used by genqueue.py (generate) and api.py (ping, to fail fast when ComfyUI or the models disk is missing).
 """
 import json
 import time
@@ -10,6 +12,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+# The ComfyUI API is called without authentication; the studio only ever talks to cfg.comfy_url (local).
 CLIENT_ID = "canva-studio"
 _DOWN = "ComfyUI недоступний за адресою {url}: запустіть ComfyUI і повторіть."
 
